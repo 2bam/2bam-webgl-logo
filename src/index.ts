@@ -22,9 +22,11 @@ function loadShader(type: 'vertex' | 'fragment', sourceCode: string) {
 const vertexShader = `
 attribute vec3 aVertexPosition;
 attribute vec4 aVertexColor;
+uniform mat4 uModelView;
+uniform mat4 uProjection;
 varying vec4 vColor;
 void main() {
-    gl_Position = vec4(aVertexPosition,1);
+    gl_Position = uProjection * uModelView * vec4(aVertexPosition,1);
     vColor = aVertexColor;
 }
 `;
@@ -51,6 +53,8 @@ gl.useProgram(program);
 
 const aVertexPosition = gl.getAttribLocation(program, 'aVertexPosition');
 const aVertexColor = gl.getAttribLocation(program, 'aVertexColor');
+const uProjection = gl.getUniformLocation(program, 'uProjection');
+const uModelView = gl.getUniformLocation(program, 'uModelView');
 
 function createVertexBuffer(vtx: number[], inds: number[]) {
     const vertices = gl.createBuffer();
@@ -69,7 +73,7 @@ const { vertices: vtxQuad, indices: idxQuad } = createVertexBuffer(
         1, -1, 0,
         -1, 1, 0,
         1, 1, 0,
-    ].map(x => x * 0.5),
+    ],
     [0, 1, 2, 3]
 )
 
@@ -101,7 +105,7 @@ function drawSprite(at: vec3, color: Color, camera: mat4) {
 
 }
 
-function draw() {
+function draw(time: number) {
     gl.viewport(0, 0, canvas.width, canvas.height);
     gl.clear(gl.COLOR_BUFFER_BIT);
 
@@ -109,6 +113,18 @@ function draw() {
     // gl.vertexAttribPointer(aVertexPosition, 3, gl.FLOAT, false, 0, 0); //!
     // gl.enableVertexAttribArray(aVertexPosition);
     // gl.drawArrays(gl.TRIANGLES, 0, 3);
+
+    const mtxProjection = mat4.create();
+    const mtxModelView = mat4.create();
+    mat4.perspective(mtxProjection, 90, canvas.width / canvas.height, 0.1, 100);
+
+    mat4.identity(mtxModelView);
+    const t = time * 0.001;
+    const m = 0.1;
+    mat4.lookAt(mtxModelView, [Math.cos(t) * m, Math.sin(t) * m, -1], [0, 0, 0], [0, 1, 0]);
+
+    gl.uniformMatrix4fv(uProjection, false, mtxProjection)
+    gl.uniformMatrix4fv(uModelView, false, mtxModelView)
 
     gl.bindBuffer(gl.ARRAY_BUFFER, vtxQuad);
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, idxQuad);
@@ -125,6 +141,7 @@ function draw() {
     //gl.vertexAttrib4f(aVertexColor, 1, 0, 0, 1);
     gl.drawElements(gl.TRIANGLE_STRIP, 4, gl.UNSIGNED_SHORT, 0);
 
+    requestAnimationFrame(draw)
 }
 
-draw();
+draw(0);
