@@ -1,0 +1,8 @@
+{
+    "editor.formatOnSave": true,
+    "javascript.format.semicolons": "ignore",
+    "typescript.format.semicolons": "insert",
+    "editor.rulers": [
+        120
+    ]
+}

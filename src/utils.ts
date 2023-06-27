@@ -10,7 +10,21 @@ export function loadShader(gl: WebGLRenderingContext, type: 'vertex' | 'fragment
         console.error(`Couldn't compile ${type} shader`);
         console.error('Shader compiler log: ' + compilationLog);
         gl.deleteShader(shader);
-        throw new Error('Error copiling shader')
+        throw new Error('Error copiling shader');
     }
     return shader;
 }
+
+export function loadProgram(gl: WebGLRenderingContext, vertexShader: string, fragmentShader: string) {
+    const program = gl.createProgram();
+    gl.attachShader(program, loadShader(gl, 'vertex', vertexShader));
+    gl.attachShader(program, loadShader(gl, 'fragment', fragmentShader));
+    gl.linkProgram(program);
+
+    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+        console.error("Couldn't link program");
+        gl.deleteProgram(program);
+    }
+    return program;
+}
+
