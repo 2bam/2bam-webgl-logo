@@ -445,32 +445,41 @@ function frame(timeMillis: number) {
 }
 
 function actorsThink() {
-    const notPlacedNorAssigned = pieces.filter(p => !world.placed.has(p.uid) && !world.assigned.has(p.uid));
-    const notMidFlight = notPlacedNorAssigned.filter(p => p.position[1] === 0);
-
-    // FIXME: Possibly better to have some time before that...To make sure the dude actually waits if another needs to go first. Maybe that wait "at base" can go in Actors's PlaceState
-    // const candidates = notMidFlight.filter(p => p.needs.length === 0 || p.needs.some(n => world.placed.has(n) || world.assigned.has(n)));
-    const candidates = notMidFlight.filter(p => p.needs.length === 0 || p.needs.some(n => world.placed.has(n)));
-
-    if (candidates.length) {
-        // Build from the bottom up (y = targetPosition[1])
-        candidates.sort((a, b) => a.targetPosition[1] !== b.targetPosition[1] ? a.targetPosition[1] - b.targetPosition[1] : Math.random());
-        //const chosen = candidates[Math.floor(Math.random() * candidates.length)];
-        //const chosen = candidates[0];
-        //vec3.copy(chosen.position, chosen.targetPosition);
-        //world.placed.set(chosen.uid, chosen);
-
-        // FIXME: get nearest candidate to actors first!
-
-        let candidateIndex = 0;
-        actors.sort((a, b) => Math.random());
+    const notPlaced = pieces.filter(p => !world.placed.has(p.uid));
+    if (notPlaced.length === 0 && actors.every(actor => actor.state.CanDance())) {
         for (const actor of actors) {
-            if (actor.state.Collect(candidates[candidateIndex])) {
-                candidateIndex++;
-                if (candidateIndex >= candidates.length) break;
+            actor.state.Dance();
+        }
+    }
+    else {
+        const notAssigned = notPlaced.filter(p => !world.assigned.has(p.uid));
+        const notMidFlight = notAssigned.filter(p => p.position[1] === 0);
+
+        // FIXME: Possibly better to have some time before that...To make sure the dude actually waits if another needs to go first. Maybe that wait "at base" can go in Actors's PlaceState
+        // const candidates = notMidFlight.filter(p => p.needs.length === 0 || p.needs.some(n => world.placed.has(n) || world.assigned.has(n)));
+        const candidates = notMidFlight.filter(p => p.needs.length === 0 || p.needs.some(n => world.placed.has(n)));
+
+        if (candidates.length) {
+            // Build from the bottom up (y = targetPosition[1])
+            candidates.sort((a, b) => a.targetPosition[1] !== b.targetPosition[1] ? a.targetPosition[1] - b.targetPosition[1] : Math.random());
+            //const chosen = candidates[Math.floor(Math.random() * candidates.length)];
+            //const chosen = candidates[0];
+            //vec3.copy(chosen.position, chosen.targetPosition);
+            //world.placed.set(chosen.uid, chosen);
+
+            // FIXME: get nearest candidate to actors first!
+
+            let candidateIndex = 0;
+            actors.sort((a, b) => Math.random());
+            for (const actor of actors) {
+                if (actor.state.Collect(candidates[candidateIndex])) {
+                    candidateIndex++;
+                    if (candidateIndex >= candidates.length) break;
+                }
             }
         }
     }
+
     setTimeout(actorsThink, 100);
 }
 actorsThink();
@@ -486,7 +495,7 @@ function tap(ev: Event) {
 lastTime = performance.now() / 1000.0;
 requestAnimationFrame(frame);
 
-//setTimeout(() => scatter(pieces), 1000);
+setTimeout(() => scatter(pieces), 1000);
 
 canvas.addEventListener('click', tap);
 canvas.addEventListener('touchstart', tap);

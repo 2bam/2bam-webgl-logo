@@ -21,7 +21,7 @@ export class Actor {
     constructor(world: World, position: ReadonlyVec3) {
         this.world = world;
         this.position = vec3.clone(position);
-        this.state = new IdleState(this);
+        this.state = new InitialState(this);
         this.transform = mat4.create();
         this.wiggle = 0;
     }
@@ -80,6 +80,7 @@ abstract class ActorState {
     constructor(actor: Actor) {
         this._actor = actor;
     }
+
     abstract OnUpdate(time: number, deltaTime: number): void;
     OnExit(): void { }
 
@@ -105,13 +106,34 @@ abstract class ActorState {
     // External Transitions
     Collect(piece: Piece) { return false; }
     Release() { return false; }
-    //TODO: Dance()
+    Dance() { return false; }
+    CanDance() { return false; }
 }
 
 class IdleState extends ActorState {
+    override OnUpdate(time: number, deltaTime: number) {
+    }
+
+    override Collect(piece: Piece) {
+        this._actor.ChangeState(new CollectState(this._actor, piece));
+        return true;
+    }
+
+    override Dance() {
+        this._actor.ChangeState(new DanceState(this._actor));
+        return true;
+    }
+
+    CanDance() { return true; }
+}
+
+class InitialState extends IdleState {
+    CanDance() { return false; }
+}
+
+class DanceState extends ActorState {
 
     override OnUpdate(time: number, deltaTime: number) {
-        //TODO: wiggle
         this._actor.wiggle = Math.sin(time * 5);
     }
 
@@ -124,6 +146,7 @@ class IdleState extends ActorState {
         return true;
     }
 }
+
 
 class CollectState extends ActorState {
     _piece: Piece;
