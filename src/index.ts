@@ -52,7 +52,7 @@ const logo = `
 
 
 
-function makePieces() {
+function MakePieces() {
     console.log(logo);
     const lines = logo.split('\n');
     lines.reverse();
@@ -98,7 +98,7 @@ function makePieces() {
     });
     return pieces;
 }
-const pieces = makePieces();
+const pieces = MakePieces();
 const world = new World();
 for (const piece of pieces) world.PlacePiece(piece);
 

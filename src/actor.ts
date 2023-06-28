@@ -9,8 +9,6 @@ const SPEED = 9;
 
 export class Actor {
     position: vec3;
-    // TODO: cuando terminan se ponen a saltar
-    // TODO: cuando tenga mas onda, se equivocan en poner uno mal y lo sacan y lo ponen en el lugar correcto
     state: ActorState;
 
     wiggle = 0;
@@ -31,6 +29,7 @@ export class Actor {
         this.state = newState;
     }
 
+    // FIXME: This should be split in two funcs and two states (Climb/Walk) restoring original state (kept as ref) upon reach
     MoveTowards(to: vec3, deltaTime: number) {
         // In this method we assume wherever the character may need to go, if higher than the ground, then it must be at
         // the sign placement. As such we avoid needing to detect proximity to the sign, just reach first the base at 
@@ -81,31 +80,37 @@ abstract class ActorState {
         this._actor = actor;
     }
 
+    //
+    // State specific
+    //
+
     abstract OnUpdate(time: number, deltaTime: number): void;
     OnExit(): void { }
 
     OnDraw(gl: WebGLRenderingContext): void {
-        //FIXME: Coupled to drawSprite
+        const wiggleAngleRad = this._actor.wiggle * 10 * DEG_TO_RAD;
+        const t = (1 - Math.abs(this._actor.wiggle));
+        const h = t * 0.25;
+
         const xf = this._actor.transform;
         mat4.identity(xf);
         mat4.translate(xf, xf, this._actor.position);
+        if (this.CanDance())
+            mat4.translate(xf, xf, [0, t * 0.1, 0]);
         mat4.multiply(xf, xf, mtxSprite);
-        const wiggleAngleRad = this._actor.wiggle * 10 * DEG_TO_RAD;
-        //console.log('wiggleangle', this._actor.wiggle, wiggleAngleRad);
         mat4.rotateZ(xf, xf, wiggleAngleRad);
-        const h = (1 - Math.abs(this._actor.wiggle)) * 0.25;
-        mat4.scale(xf, xf, [1 - h / 2, 1 + h, 1]);
+        mat4.scale(xf, xf, [1 - h / 2, 1 + h, 1]); // Stretch
         mat4.scale(xf, xf, [0.1, 0.1, 0.1]);
 
-        //6e7772 51e793
-        //drawQuad(gl, xf, [0x41 / 0xff, 0xe7 / 0xff, 0x93 / 0xff, 1]);
+        //FIXME: Coupled to DrawQuad in index.ts
         DrawQuad(gl, xf, [0, 1, 0, 1]);
-        //drawSprite(gl, this._actor.position, [0, 255, 0, 255], 'actor');
     }
 
-    // External Transitions
+    //
+    // Externally fed transitions
+    //
 
-    // Return true if the collect assignment was accepted
+    // Returns true if the collect assignment was accepted
     Collect(piece: Piece) { return false; }
     Stop() { }
     Dance() { }
@@ -134,7 +139,6 @@ class InitialState extends IdleState {
 }
 
 class DanceState extends ActorState {
-
     override OnUpdate(time: number, deltaTime: number) {
         this._actor.wiggle = Math.sin(time * 5);
     }
@@ -152,6 +156,8 @@ class DanceState extends ActorState {
         this._actor.ChangeState(new IdleState(this._actor));
         return true;
     }
+
+    CanDance() { return true; }
 }
 
 
@@ -192,10 +198,9 @@ class PlaceState extends ActorState {
     }
 
     OnUpdate(time: number, deltaTime: number) {
-        //TODO: if not on ground, wait for it to fall
         const result = this._actor.MoveTowards(this._piece.targetPosition, deltaTime);
         vec3.copy(this._piece.position, this._actor.position);
-        this._piece.position[1] += 0.2;
+        this._piece.position[1] += 0.2; // Keep it over our heads
         if (result === 'reached') {
             this._actor.world.PlacePiece(this._piece);
             this._actor.world.assigned.delete(this._piece.uid);
@@ -213,6 +218,7 @@ class PlaceState extends ActorState {
 
 class ClimbDownState extends ActorState {
     _target: vec3;
+
     constructor(actor: Actor) {
         super(actor);
         const d = 1 + Math.random() * 2;
