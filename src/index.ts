@@ -1,12 +1,13 @@
 import { vec3, vec4, mat4, ReadonlyVec3, ReadonlyVec4 } from 'gl-matrix';
-import { loadProgram, loadShader } from './utils';
-import { Piece } from './piece';
+import { DEG_TO_RAD, loadProgram, loadShader } from './utils';
+import { Piece, UpdatePieceTransform } from './piece';
 import { Actor } from './actor';
 import { World } from './world';
+import { DrawStencil, GetStencilBuffer } from './stencil';
 
 
 const canvas = document.getElementById("canvas") as HTMLCanvasElement;
-const gl = canvas.getContext("webgl");
+const gl = canvas.getContext("webgl", { stencil: true, alpha: true });
 
 
 const vertexShader = `
@@ -61,20 +62,24 @@ const { vertices: vtxQuad, indices: idxQuad } = createVertexBuffer(
 );
 
 
+
 const terrainPts = [];
 const terrainCls = [];
 const terrainIdx = [];
+const TERRAIN_SIZE = 0.5;
 const terrainStride = 20;
-for (let z = -2; z < 10; z++) {
+for (let z = -5; z < 7; z++) {
     for (let x = -10; x < 10; x++) {
         const y = 0 + Math.random() * 0.3;
-        terrainPts.push(x, y, z);
+        terrainPts.push(x * TERRAIN_SIZE, y * TERRAIN_SIZE, z * TERRAIN_SIZE);
+
+        // This was a bug, but ended up looking cool.
         terrainCls.push(Math.floor(Math.random() * 255), 0, Math.floor(Math.random() * 255), 255);
         terrainCls.push((x + 10) * 10, 0, (z + 10) * 10, 255);
     }
 }
 let i = 0;
-for (let z = -2; z < 9; z++) {
+for (let z = -5; z < 6; z++) {
 
     for (let x = -10; x < 9; x++) {
         terrainIdx.push(i, i + 1, i + terrainStride + 1, i + terrainStride + 1, i + terrainStride, i);
@@ -115,7 +120,7 @@ const vtx = [
 ];
 gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vtx), gl.STATIC_DRAW);
 
-gl.clearColor(0, 0, 0, 1);
+gl.clearColor(0, 0, 0, 0);
 
 
 
@@ -125,7 +130,7 @@ const logo = `
     /  |   )   /  &   | & / |          
  ---   +---   +----+  |  V  |        
 /      |   )  |    |  |     |         
------  +---   '    '  '     '    
+-----  +---   -    -  -     -
 `;
 
 
@@ -162,13 +167,13 @@ function makePieces() {
 
     const pieces: Piece[] = withNeeds.map(({ gx, gy, uid, needs }) => {
         const position: vec3 = [gx * .2 - 3, gy * .2, 0];
-
-        return { uid, position, targetPosition: [...position], velocity: [0, 0, 0], needs };
+        return { uid, position, targetPosition: [...position], velocity: [0, 0, 0], eulerAngles: [0, 0, 0], eulerVelocity: [0, 0, 0], transform: mat4.create(), needs };
     });
     return pieces;
 }
 const pieces = makePieces();
 const world = new World();
+for (const piece of pieces) world.PlacePiece(piece);
 
 const actors: Actor[] = [
     new Actor(world, [1, 0, 0]),
@@ -193,26 +198,36 @@ function scatter(ps: Piece[]) {
         p.velocity[0] = (Math.random() - 0.5) * 5;
         p.velocity[1] = 5 + Math.random() * 0.5;
         p.velocity[2] = (Math.random() - 0.5) * 5;
-        p.position[1] += 0.1; //FIXME: Why is this needed if the floor check is done after the integration?
+        p.position[1] = Math.max(p.position[1] + 0.1, 0); //FIXME: Why is this needed if the floor check is done after the integration?
+
+        p.eulerVelocity[0] = (Math.random() - 0.5) * 3000;
+        p.eulerVelocity[1] = (Math.random() - 0.5) * 3000;
+        p.eulerVelocity[2] = (Math.random() - 0.5) * 3000;
     }
 }
 
-scatter(pieces);
+
+
 
 //const piecesQuads = new Quads(pieces.length);
 
-const mtxInvView = mat4.create();
 
+export const mtxInvView = mat4.create();//FIXME: awkward
+export const mtxSprite = mat4.create();//FIXME: awkward
 
 export function drawSprite(gl: WebGLRenderingContext, at: ReadonlyVec3, color: ReadonlyVec4, mode: 'actor' | 'piece') {
     const mtxModel = mat4.create();
     mat4.identity(mtxModel);
     mat4.translate(mtxModel, mtxModel, at);
-    mat4.scale(mtxModel, mtxModel, [0.1, 0.1, 0.1]);
     if (mode === 'actor') // Actor always facing camera
-        mat4.mul(mtxModel, mtxModel, mtxInvView);
+        mat4.mul(mtxModel, mtxModel, mtxSprite);
+    mat4.scale(mtxModel, mtxModel, [0.1, 0.1, 0.1]);
 
-    gl.uniformMatrix4fv(uModel, false, mtxModel);
+    drawQuad(gl, mtxModel, color);
+}
+
+export function drawQuad(gl: WebGLRenderingContext, transform: mat4, color: ReadonlyVec4) {
+    gl.uniformMatrix4fv(uModel, false, transform);
 
     gl.bindBuffer(gl.ARRAY_BUFFER, vtxQuad);
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, idxQuad);
@@ -230,23 +245,59 @@ export function drawSprite(gl: WebGLRenderingContext, at: ReadonlyVec3, color: R
 
 }
 
-let lastTime: number;
-function frame(time: number) {
 
-    const deltaTime = (time - lastTime) / 1000.0;
+let lastTime: number;
+function frame(timeMillis: number) {
+
+    const time = timeMillis / 1000.0;
+    const deltaTime = (time - lastTime);
     lastTime = time;
     for (const piece of pieces) {
-        if (world.placed.has(piece.uid)) continue;
+        if (world.placed.has(piece.uid)) {
+            continue;
+        }
+
         vec3.scaleAndAdd(piece.velocity, piece.velocity, [0, -9.8, 0], deltaTime);
         vec3.scaleAndAdd(piece.position, piece.position, piece.velocity, deltaTime);
+
+        vec3.scaleAndAdd(piece.eulerAngles, piece.eulerAngles, piece.eulerVelocity, deltaTime);
+
         if (piece.position[1] <= 0) {
             vec3.zero(piece.velocity);
             piece.position[1] = 0;
+
+            vec3.zero(piece.eulerVelocity);
+            //vec3.zero(piece.eulerAngles);
         }
+
+        UpdatePieceTransform(piece);
+
+
     }
 
     gl.viewport(0, 0, canvas.width, canvas.height);
+
+    {
+        //FIXME: do a shader specially for the stencil, move to stencil.ts
+        gl.clear(gl.STENCIL_BUFFER_BIT);
+        gl.useProgram(defaultProgram);
+        gl.disableVertexAttribArray(aVertexColor);
+        gl.vertexAttrib4f(aVertexColor, 1, 1, 1, 1);
+        gl.uniformMatrix4fv(uProjection, false, mat4.create());
+        gl.uniformMatrix4fv(uView, false, mat4.create());
+        gl.uniformMatrix4fv(uModel, false, mat4.create());
+        gl.enableVertexAttribArray(aVertexPosition);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, GetStencilBuffer(gl).vertices);
+        gl.vertexAttribPointer(aVertexPosition, 3, gl.FLOAT, false, 0, 0,); // Needs buffer bound!
+
+        DrawStencil(gl);
+    }
+
     gl.clear(gl.COLOR_BUFFER_BIT);
+    //gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT | gl.STENCIL_BUFFER_BIT);
+
+
 
     // gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer)
     // gl.vertexAttribPointer(aVertexPosition, 3, gl.FLOAT, false, 0, 0); //!
@@ -254,10 +305,11 @@ function frame(time: number) {
     // gl.drawArrays(gl.TRIANGLES, 0, 3);
     gl.useProgram(defaultProgram);
 
+
     const mtxProjection = mat4.create();
     const mtxView = mat4.create();
     const mtxModel = mat4.create();
-    mat4.perspective(mtxProjection, 90, canvas.width / canvas.height, 0.1, 100);
+    mat4.perspective(mtxProjection, 90 * DEG_TO_RAD, canvas.width / canvas.height, 0.1, 100);
 
     mat4.identity(mtxView);
     const t = time * 0.001;
@@ -268,9 +320,9 @@ function frame(time: number) {
     gl.uniformMatrix4fv(uView, false, mtxView);
 
     mat4.invert(mtxInvView, mtxView);
-
-
-
+    const lookAtViewTranslation = vec3.create();
+    mat4.getTranslation(lookAtViewTranslation, mtxView);
+    mat4.translate(mtxSprite, mtxInvView, lookAtViewTranslation);
 
 
     {
@@ -287,8 +339,12 @@ function frame(time: number) {
         gl.bindBuffer(gl.ARRAY_BUFFER, clrTerrain);
         gl.enableVertexAttribArray(aVertexColor);
         gl.vertexAttribPointer(aVertexColor, 4, gl.UNSIGNED_BYTE, true, 0, 0); //!
-
         gl.drawElements(gl.TRIANGLES, terrainIdx.length, gl.UNSIGNED_SHORT, 0);
+
+        // Draw wireframe on top
+        gl.disableVertexAttribArray(aVertexColor);
+        gl.vertexAttrib4f(aVertexColor, .13, .13, .13, 1);
+        gl.drawElements(gl.LINES, terrainIdx.length, gl.UNSIGNED_SHORT, 0);
     }
     {
         mat4.identity(mtxModel);
@@ -325,20 +381,20 @@ function frame(time: number) {
     // }
 
     for (const actor of actors) {
-        actor.state.OnUpdate(deltaTime);
+        actor.state.OnUpdate(time, deltaTime);
         //console.log(actor.state.constructor.name);
         actor.state.OnDraw(gl);
     }
 
     for (const piece of pieces) {
         //if (placed.has(piece.uid))
-        drawSprite(gl, piece.position, [1, 1, 1, 1], 'piece');
+        drawQuad(gl, piece.transform, [1, 1, 1, 1]);
     }
 
     requestAnimationFrame(frame);
 }
 
-function asd() {
+function actorsThink() {
     const notPlacedNorAssigned = pieces.filter(p => !world.placed.has(p.uid) && !world.assigned.has(p.uid));
     const notMidFlight = notPlacedNorAssigned.filter(p => p.position[1] === 0);
 
@@ -365,16 +421,22 @@ function asd() {
             }
         }
     }
-    setTimeout(asd, 100);
+    setTimeout(actorsThink, 100);
 }
-asd();
+actorsThink();
 
 
-lastTime = performance.now();
-requestAnimationFrame(frame);
 
-canvas.onclick = (ev) => {
+function tap(ev: Event) {
     //console.log(ev);
     //TODO: where you click is the center of the explosion
     scatter([...world.placed.values()]);
-};
+}
+
+lastTime = performance.now() / 1000.0;
+requestAnimationFrame(frame);
+
+setTimeout(() => scatter(pieces), 500);
+
+canvas.addEventListener('click', tap);
+canvas.addEventListener('touchstart', tap);

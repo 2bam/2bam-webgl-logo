@@ -1,3 +1,5 @@
+export const DEG_TO_RAD = Math.PI / 180;
+
 export function loadShader(gl: WebGLRenderingContext, type: 'vertex' | 'fragment', sourceCode: string) {
     const shader = gl.createShader(type === 'vertex' ? gl.VERTEX_SHADER : gl.FRAGMENT_SHADER);
     if (!shader) {
