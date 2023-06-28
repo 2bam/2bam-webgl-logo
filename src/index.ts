@@ -1,6 +1,6 @@
 import { vec3, vec4, mat4, ReadonlyVec3, ReadonlyVec4 } from 'gl-matrix';
 import { DEG_TO_RAD, extrude, flatVec3, loadProgram, loadShader } from './utils';
-import { Piece, UpdatePieceTransform } from './piece';
+import { CreateMeshesForPieces, Piece, UpdatePieceTransform } from './piece';
 import { Actor } from './actor';
 import { World } from './world';
 import { DrawStencil, GetStencilBuffer } from './stencil';
@@ -70,8 +70,8 @@ const meshBlock = CreateMesh(
     extruded.vertices,
     extruded.indices,
 );
-
-
+const meshesPieces = CreateMeshesForPieces(gl);
+console.log(meshesPieces);
 
 const terrainPts: vec3[] = [];
 const terrainCls = [];
@@ -134,13 +134,21 @@ gl.clearColor(0, 0, 0, 0);
 
 
 
+// const logo = `
+//  /--
+//  V  )  +---    /&    &  /|           
+//     )  |   )  /  &   |&/ |          
+//  /--   +---   +---+  | V |        
+// /      |   )  |   |  |   |         
+// -----  +---   -   -  -   -
+// `;
 const logo = `
- ---
-'   &  +---     /&    |&   /|           
-    /  |   )   /  &   | & / |          
- ---   +---   +----+  |  V  |        
-/      |   )  |    |  |     |         
------  +---   -    -  -     -
+  /--
+  V  )  +---     ^    &  /|           
+     )  |   )  /  &   )&/ |          
+  /--   +---   +---+  | V |        
+ /      |   )  |   |  |   |         
+ -----  +---   -   -  -   -
 `;
 
 
@@ -175,9 +183,20 @@ function makePieces() {
     }
     );
 
-    const pieces: Piece[] = withNeeds.map(({ gx, gy, uid, needs }) => {
+    const pieces: Piece[] = withNeeds.map(({ gx, gy, uid, needs, ch }) => {
         const position: vec3 = [gx * .2 - 3, gy * .2, 0];
-        return { uid, position, targetPosition: [...position], velocity: [0, 0, 0], eulerAngles: [0, 0, 0], eulerVelocity: [0, 0, 0], transform: mat4.create(), needs };
+        const mesh = meshesPieces[ch] ? meshesPieces[ch] : meshesPieces['default'];
+        return {
+            uid,
+            position,
+            targetPosition: [...position],
+            velocity: [0, 0, 0],
+            eulerAngles: [0, 0, 0],
+            eulerVelocity: [0, 0, 0],
+            transform: mat4.create(),
+            needs,
+            mesh
+        };
     });
     return pieces;
 }
@@ -403,7 +422,7 @@ function frame(timeMillis: number) {
     drawSprite(gl, [1, 0, 1], [1, 0, .5, 1], 'actor');
     drawSprite(gl, [1, 1, 1], [.5, 0, 1, 1], 'actor');
     drawSprite(gl, [-1, 1, 1], [.5, 0, 1, 1], 'actor');
-    drawSprite(gl, [-1, 1, 2], [.5, 1, 1, 1], 'actor');
+    //drawSprite(gl, [-1, 1, 2], [.5, 1, 1, 1], 'actor');
 
 
     // for (const piece of pieces) {
@@ -419,7 +438,7 @@ function frame(timeMillis: number) {
 
     for (const piece of pieces) {
         //if (placed.has(piece.uid))
-        DrawMesh(gl, piece.transform, meshBlock);
+        DrawMesh(gl, piece.transform, piece.mesh);
     }
 
     requestAnimationFrame(frame);
@@ -467,7 +486,7 @@ function tap(ev: Event) {
 lastTime = performance.now() / 1000.0;
 requestAnimationFrame(frame);
 
-setTimeout(() => scatter(pieces), 500);
+//setTimeout(() => scatter(pieces), 1000);
 
 canvas.addEventListener('click', tap);
 canvas.addEventListener('touchstart', tap);

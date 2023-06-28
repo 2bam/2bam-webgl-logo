@@ -92,7 +92,7 @@ abstract class ActorState {
         const wiggleAngleRad = this._actor.wiggle * 10 * DEG_TO_RAD;
         //console.log('wiggleangle', this._actor.wiggle, wiggleAngleRad);
         mat4.rotateZ(xf, xf, wiggleAngleRad);
-        const h = (1 - Math.abs(this._actor.wiggle)) * 0.15;
+        const h = (1 - Math.abs(this._actor.wiggle)) * 0.25;
         mat4.scale(xf, xf, [1 - h / 2, 1 + h, 1]);
         mat4.scale(xf, xf, [0.1, 0.1, 0.1]);
 
