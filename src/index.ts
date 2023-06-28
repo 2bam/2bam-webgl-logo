@@ -1,5 +1,5 @@
 import { vec3, vec4, mat4, ReadonlyVec3, ReadonlyVec4 } from 'gl-matrix';
-import { DEG_TO_RAD, flatVec3, loadProgram, loadShader } from './utils';
+import { DEG_TO_RAD, extrude, flatVec3, loadProgram, loadShader } from './utils';
 import { Piece, UpdatePieceTransform } from './piece';
 import { Actor } from './actor';
 import { World } from './world';
@@ -42,6 +42,8 @@ const uView = gl.getUniformLocation(defaultProgram, 'uView');
 const uModel = gl.getUniformLocation(defaultProgram, 'uModel');
 
 
+
+
 const meshQuad = CreateMesh(
     gl,
     [
@@ -51,6 +53,22 @@ const meshQuad = CreateMesh(
         [1, 1, 0],
     ],
     [0, 1, 2, 3]
+);
+
+const extruded = extrude(
+    [
+        [-1, -1, 0],
+        [1, -1, 0],
+        [-1, 1, 0],
+        [1, 1, 0],
+    ],
+    [0, 1, 2, 3]
+    , .7
+);
+const meshBlock = CreateMesh(
+    gl,
+    extruded.vertices,
+    extruded.indices,
 );
 
 
@@ -238,6 +256,7 @@ export function drawQuad(gl: WebGLRenderingContext, transform: mat4, color: Read
 }
 
 //FIXME: Move to Mesh.ts and pass around a context/info instead of "gl" with the programs and attribs/uniform locations
+//FIXME: This func is the bottleneck
 export function DrawMesh(gl: WebGLRenderingContext, transform: mat4, mesh: Mesh) {
     gl.uniformMatrix4fv(uModel, false, transform);
 
@@ -253,7 +272,8 @@ export function DrawMesh(gl: WebGLRenderingContext, transform: mat4, mesh: Mesh)
     gl.disableVertexAttribArray(aVertexColor);
     gl.vertexAttrib4fv(aVertexColor, [1, 1, 0.5, 1]);
 
-    gl.drawElements(gl.TRIANGLE_STRIP, 4, gl.UNSIGNED_SHORT, 0);
+    console.log(mesh.indexCount);
+    gl.drawElements(gl.TRIANGLE_STRIP, mesh.indexCount, gl.UNSIGNED_SHORT, 0);
 
 }
 
@@ -358,19 +378,19 @@ function frame(timeMillis: number) {
         gl.drawElements(gl.LINES, terrainIdx.length, gl.UNSIGNED_SHORT, 0);
     }
     {
-        mat4.identity(mtxModel);
+        // mat4.identity(mtxModel);
 
-        gl.uniformMatrix4fv(uModel, false, mtxModel);
+        // gl.uniformMatrix4fv(uModel, false, mtxModel);
 
-        gl.bindBuffer(gl.ARRAY_BUFFER, meshQuad.vertices);
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, meshQuad.indices);
-        gl.enableVertexAttribArray(aVertexPosition);
-        gl.vertexAttribPointer(aVertexPosition, 3, gl.FLOAT, false, 0, 0); //!
+        // gl.bindBuffer(gl.ARRAY_BUFFER, meshQuad.vertices);
+        // gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, meshQuad.indices);
+        // gl.enableVertexAttribArray(aVertexPosition);
+        // gl.vertexAttribPointer(aVertexPosition, 3, gl.FLOAT, false, 0, 0); //!
 
 
-        gl.bindBuffer(gl.ARRAY_BUFFER, clrQuad);
-        gl.enableVertexAttribArray(aVertexColor);
-        gl.vertexAttribPointer(aVertexColor, 4, gl.UNSIGNED_BYTE, true, 0, 0); //!
+        // gl.bindBuffer(gl.ARRAY_BUFFER, clrQuad);
+        // gl.enableVertexAttribArray(aVertexColor);
+        // gl.vertexAttribPointer(aVertexColor, 4, gl.UNSIGNED_BYTE, true, 0, 0); //!
 
 
         //gl.disableVertexAttribArray(aVertexColor);
@@ -399,7 +419,7 @@ function frame(timeMillis: number) {
 
     for (const piece of pieces) {
         //if (placed.has(piece.uid))
-        drawQuad(gl, piece.transform, [1, 1, 0.5, 1]);
+        DrawMesh(gl, piece.transform, meshBlock);
     }
 
     requestAnimationFrame(frame);

@@ -5,6 +5,7 @@ import { flatVec3 } from './utils';
 export interface Mesh {
     vertices: WebGLBuffer;
     indices: WebGLBuffer;
+    indexCount: number;
 }
 
 export function CreateMesh(gl: WebGLRenderingContext, vs: vec3[], ics: number[]): Mesh {
@@ -16,6 +17,6 @@ export function CreateMesh(gl: WebGLRenderingContext, vs: vec3[], ics: number[])
     if (!indices) throw new Error('Error creating buffer');
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indices);
     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(ics), gl.STATIC_DRAW);
-    return { vertices, indices };
+    return { vertices, indices, indexCount: ics.length };
 }
 
