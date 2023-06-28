@@ -22,11 +22,12 @@
             display: block;
         }
 
-        div {
+        #legend {
             padding-top: 30px;
             color: #fff;
             font-family: monospace;
             max-width: 800px;
+            font-size: 14pt;
         }
     </style>
 </head>
@@ -34,14 +35,20 @@
 <body>
     <canvas id="canvas" class="centered" width="800" height="400"></canvas>
 
-    <div class="centered">
+    <div id="legend" class="centered">
         This project was done in a week or so to replace my old webpage and showcase some skills
         <ul>
-            <li>TypeScript </li>
+            <li> TypeScript </li>
             <li> Vanilla WebGL</li>
-            <li> Some OOP (Automatas state machines), some DOD (pieces), some functional</li>
             <li> Node and Webpack</li>
             <li> Github Actions to build and deploy to its own Github Page</li>
+            <li> Paradigms
+                <ul>
+                    <li>Some OOP (Automatas' State pattern)</li>
+                    <li>Some DOD (Sign pieces)</li>
+                    <li>Some functional</li>
+                </ul>
+            </li>
         </ul>
     </div>
 
