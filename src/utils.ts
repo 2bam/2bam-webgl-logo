@@ -1,3 +1,5 @@
+import { vec3 } from "gl-matrix";
+
 export const DEG_TO_RAD = Math.PI / 180;
 
 export function loadShader(gl: WebGLRenderingContext, type: 'vertex' | 'fragment', sourceCode: string) {
@@ -30,3 +32,21 @@ export function loadProgram(gl: WebGLRenderingContext, vertexShader: string, fra
     return program;
 }
 
+// We assume no internal vertices as we deal with simple shapes. We'll also asume triangles mode (no strip, etc)
+export function extrude(vertices: vec3[], indices: number[], zDepth: number) {
+    const zOffset = vec3.fromValues(0, 0, zDepth);
+    const iOffset = vertices.length;
+
+    // Add the other face (TODO: if culling was active it should be reverted?)
+    const newVertices = vertices.concat(vertices.map(v => vec3.add(vec3.create(), v, zOffset)));
+    const newIndices = indices.concat(indices.map(i => i + iOffset));
+    // zip em
+    for (let i = 0; i < indices.length; i++)
+        newIndices.push(newIndices[i], newIndices[i + iOffset]);
+
+    return { vertices: newVertices, indices: newIndices };
+};
+
+export function flatVec3(vs: vec3[]): number[] {
+    return vs.flatMap(v => [...v]);
+}

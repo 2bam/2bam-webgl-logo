@@ -96,7 +96,9 @@ abstract class ActorState {
         mat4.scale(xf, xf, [1 - h / 2, 1 + h, 1]);
         mat4.scale(xf, xf, [0.1, 0.1, 0.1]);
 
-        drawQuad(gl, xf, [0, 255, 0, 255]);
+        //6e7772 51e793
+        //drawQuad(gl, xf, [0x41 / 0xff, 0xe7 / 0xff, 0x93 / 0xff, 1]);
+        drawQuad(gl, xf, [0, 1, 0, 1]);
         //drawSprite(gl, this._actor.position, [0, 255, 0, 255], 'actor');
     }
 

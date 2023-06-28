@@ -1,9 +1,10 @@
 import { vec3, vec4, mat4, ReadonlyVec3, ReadonlyVec4 } from 'gl-matrix';
-import { DEG_TO_RAD, loadProgram, loadShader } from './utils';
+import { DEG_TO_RAD, flatVec3, loadProgram, loadShader } from './utils';
 import { Piece, UpdatePieceTransform } from './piece';
 import { Actor } from './actor';
 import { World } from './world';
 import { DrawStencil, GetStencilBuffer } from './stencil';
+import { CreateMesh, Mesh } from './mesh';
 
 
 const canvas = document.getElementById("canvas") as HTMLCanvasElement;
@@ -40,30 +41,21 @@ const uProjection = gl.getUniformLocation(defaultProgram, 'uProjection');
 const uView = gl.getUniformLocation(defaultProgram, 'uView');
 const uModel = gl.getUniformLocation(defaultProgram, 'uModel');
 
-function createVertexBuffer(vtx: number[], inds: number[]) {
-    const vertices = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, vertices);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vtx), gl.STATIC_DRAW);
-    const indices = gl.createBuffer();
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indices);
-    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(inds), gl.STATIC_DRAW);
-    return { vertices, indices };
-}
 
-
-const { vertices: vtxQuad, indices: idxQuad } = createVertexBuffer(
+const meshQuad = CreateMesh(
+    gl,
     [
-        -1, -1, 0,
-        1, -1, 0,
-        -1, 1, 0,
-        1, 1, 0,
+        [-1, -1, 0],
+        [1, -1, 0],
+        [-1, 1, 0],
+        [1, 1, 0],
     ],
     [0, 1, 2, 3]
 );
 
 
 
-const terrainPts = [];
+const terrainPts: vec3[] = [];
 const terrainCls = [];
 const terrainIdx = [];
 const TERRAIN_SIZE = 0.5;
@@ -71,7 +63,7 @@ const terrainStride = 20;
 for (let z = -5; z < 7; z++) {
     for (let x = -10; x < 10; x++) {
         const y = 0 + Math.random() * 0.3;
-        terrainPts.push(x * TERRAIN_SIZE, y * TERRAIN_SIZE, z * TERRAIN_SIZE);
+        terrainPts.push([x * TERRAIN_SIZE, y * TERRAIN_SIZE, z * TERRAIN_SIZE]);
 
         // This was a bug, but ended up looking cool.
         terrainCls.push(Math.floor(Math.random() * 255), 0, Math.floor(Math.random() * 255), 255);
@@ -94,7 +86,7 @@ console.log(terrainIdx.length, "terrainIdx");
 
 
 
-const { vertices: vtxTerrain, indices: idxTerrain } = createVertexBuffer(terrainPts, terrainIdx);
+const meshTerrain = CreateMesh(gl, terrainPts, terrainIdx);
 const clrTerrain = gl.createBuffer();
 gl.bindBuffer(gl.ARRAY_BUFFER, clrTerrain);
 gl.bufferData(gl.ARRAY_BUFFER, new Uint8Array(terrainCls), gl.STATIC_DRAW);
@@ -229,8 +221,8 @@ export function drawSprite(gl: WebGLRenderingContext, at: ReadonlyVec3, color: R
 export function drawQuad(gl: WebGLRenderingContext, transform: mat4, color: ReadonlyVec4) {
     gl.uniformMatrix4fv(uModel, false, transform);
 
-    gl.bindBuffer(gl.ARRAY_BUFFER, vtxQuad);
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, idxQuad);
+    gl.bindBuffer(gl.ARRAY_BUFFER, meshQuad.vertices);
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, meshQuad.indices);
     gl.enableVertexAttribArray(aVertexPosition);
     gl.vertexAttribPointer(aVertexPosition, 3, gl.FLOAT, false, 0, 0); //!
 
@@ -245,6 +237,25 @@ export function drawQuad(gl: WebGLRenderingContext, transform: mat4, color: Read
 
 }
 
+//FIXME: Move to Mesh.ts and pass around a context/info instead of "gl" with the programs and attribs/uniform locations
+export function DrawMesh(gl: WebGLRenderingContext, transform: mat4, mesh: Mesh) {
+    gl.uniformMatrix4fv(uModel, false, transform);
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, mesh.vertices);
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, mesh.indices);
+    gl.enableVertexAttribArray(aVertexPosition);
+    gl.vertexAttribPointer(aVertexPosition, 3, gl.FLOAT, false, 0, 0); //!
+
+    // gl.bindBuffer(gl.ARRAY_BUFFER, clrQuad);
+    // gl.enableVertexAttribArray(aVertexColor);
+    // gl.vertexAttribPointer(aVertexColor, 4, gl.UNSIGNED_BYTE, true, 0, 0); //!
+
+    gl.disableVertexAttribArray(aVertexColor);
+    gl.vertexAttrib4fv(aVertexColor, [1, 1, 0.5, 1]);
+
+    gl.drawElements(gl.TRIANGLE_STRIP, 4, gl.UNSIGNED_SHORT, 0);
+
+}
 
 let lastTime: number;
 function frame(timeMillis: number) {
@@ -330,8 +341,8 @@ function frame(timeMillis: number) {
         mat4.translate(mtxModel, mtxModel, [0, 0, 0]);
         gl.uniformMatrix4fv(uModel, false, mtxModel);
 
-        gl.bindBuffer(gl.ARRAY_BUFFER, vtxTerrain);
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, idxTerrain);
+        gl.bindBuffer(gl.ARRAY_BUFFER, meshTerrain.vertices);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, meshTerrain.indices);
         gl.enableVertexAttribArray(aVertexPosition);
         gl.vertexAttribPointer(aVertexPosition, 3, gl.FLOAT, false, 0, 0); //!
 
@@ -351,8 +362,8 @@ function frame(timeMillis: number) {
 
         gl.uniformMatrix4fv(uModel, false, mtxModel);
 
-        gl.bindBuffer(gl.ARRAY_BUFFER, vtxQuad);
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, idxQuad);
+        gl.bindBuffer(gl.ARRAY_BUFFER, meshQuad.vertices);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, meshQuad.indices);
         gl.enableVertexAttribArray(aVertexPosition);
         gl.vertexAttribPointer(aVertexPosition, 3, gl.FLOAT, false, 0, 0); //!
 
@@ -388,7 +399,7 @@ function frame(timeMillis: number) {
 
     for (const piece of pieces) {
         //if (placed.has(piece.uid))
-        drawQuad(gl, piece.transform, [1, 1, 1, 1]);
+        drawQuad(gl, piece.transform, [1, 1, 0.5, 1]);
     }
 
     requestAnimationFrame(frame);

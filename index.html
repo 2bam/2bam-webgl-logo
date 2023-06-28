@@ -14,19 +14,37 @@
             background-size: 32px 32px, 32px 32px;
         }
 
-        canvas {
+        .centered {
             padding-left: 0;
             padding-right: 0;
             margin-left: auto;
             margin-right: auto;
             display: block;
+        }
 
+        div {
+            padding-top: 30px;
+            color: #fff;
+            font-family: monospace;
+            max-width: 800px;
         }
     </style>
 </head>
 
 <body>
-    <canvas id="canvas" width="800" height="400"></canvas>
+    <canvas id="canvas" class="centered" width="800" height="400"></canvas>
+
+    <div class="centered">
+        This project was done in a week or so to replace my old webpage and showcase some skills
+        <ul>
+            <li>TypeScript </li>
+            <li> Vanilla WebGL</li>
+            <li> Some OOP (Automatas state machines), some DOD (pieces), some functional</li>
+            <li> Node and Webpack</li>
+            <li> Github Actions to build and deploy to its own Github Page</li>
+        </ul>
+    </div>
+
 </body>
 
 </html>
