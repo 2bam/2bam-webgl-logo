@@ -1,7 +1,6 @@
 import { mat4, vec3 } from "gl-matrix";
-import { DEG_TO_RAD, extrude } from "./utils";
+import { DEG_TO_RAD, ExtrudeTriangleStripWithoutCentralVertices } from "./utils";
 import { CreateMesh, Mesh } from "./mesh";
-
 
 export interface Piece {
     uid: number;
@@ -28,7 +27,7 @@ export function UpdatePieceTransform(piece: Piece) {
 }
 
 function CreatePiece(gl: WebGLRenderingContext, vs: vec3[], ics: number[]) {
-    const extruded = extrude(vs, ics, 0.7);
+    const extruded = ExtrudeTriangleStripWithoutCentralVertices(vs, ics, 0.7);
     return CreateMesh(
         gl,
         extruded.vertices,

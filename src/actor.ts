@@ -1,7 +1,7 @@
 import { ReadonlyVec3, mat4, vec3 } from "gl-matrix";
 import { Piece } from "./piece";
 import { World } from "./world";
-import { drawQuad, drawSprite, mtxInvView, mtxSprite } from ".";
+import { DrawQuad, DrawSprite, mtxInvView, mtxSprite } from ".";
 import { DEG_TO_RAD } from "./utils";
 
 const ACTOR_REACH_THRESHOLD = 0.01;
@@ -99,14 +99,16 @@ abstract class ActorState {
 
         //6e7772 51e793
         //drawQuad(gl, xf, [0x41 / 0xff, 0xe7 / 0xff, 0x93 / 0xff, 1]);
-        drawQuad(gl, xf, [0, 1, 0, 1]);
+        DrawQuad(gl, xf, [0, 1, 0, 1]);
         //drawSprite(gl, this._actor.position, [0, 255, 0, 255], 'actor');
     }
 
     // External Transitions
+
+    // Return true if the collect assignment was accepted
     Collect(piece: Piece) { return false; }
-    Release() { return false; }
-    Dance() { return false; }
+    Stop() { }
+    Dance() { }
     CanDance() { return false; }
 }
 
@@ -145,6 +147,11 @@ class DanceState extends ActorState {
         this._actor.ChangeState(new CollectState(this._actor, piece));
         return true;
     }
+
+    override Stop() {
+        this._actor.ChangeState(new IdleState(this._actor));
+        return true;
+    }
 }
 
 
@@ -169,7 +176,7 @@ class CollectState extends ActorState {
         }
     }
 
-    Release() {
+    Stop() {
         this._actor.world.assigned.delete(this._piece.uid);
         this._actor.ChangeState(new ClimbDownState(this._actor));
         return true;
@@ -196,7 +203,7 @@ class PlaceState extends ActorState {
         }
     }
 
-    Release() {
+    Stop() {
         this._actor.world.assigned.delete(this._piece.uid);
         this._actor.ChangeState(new ClimbDownState(this._actor));
         return true;
@@ -209,7 +216,7 @@ class ClimbDownState extends ActorState {
     constructor(actor: Actor) {
         super(actor);
         const d = 1 + Math.random() * 2;
-        const a = Math.random() * Math.PI; // Only 180° (front)
+        const a = (20 + 140 * Math.random()) * DEG_TO_RAD; // Only on front
         this._target = [Math.cos(a) * d, 0, Math.sin(a) * d];
     }
 

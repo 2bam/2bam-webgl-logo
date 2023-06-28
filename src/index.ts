@@ -1,47 +1,26 @@
-import { vec3, vec4, mat4, ReadonlyVec3, ReadonlyVec4 } from 'gl-matrix';
-import { DEG_TO_RAD, extrude, flatVec3, loadProgram, loadShader } from './utils';
+import { vec3, mat4, ReadonlyVec3, ReadonlyVec4, ReadonlyMat4 } from 'gl-matrix';
+import { DEG_TO_RAD, LoadProgram } from './utils';
 import { CreateMeshesForPieces, Piece, UpdatePieceTransform } from './piece';
 import { Actor } from './actor';
 import { World } from './world';
 import { DrawStencil, GetStencilBuffer } from './stencil';
 import { CreateMesh, Mesh } from './mesh';
+import { SHADER_VERTEX_DEFAULT, SHADER_FRAGMENT_DEFAULT } from './shaders';
+import { CreateTerrain } from './terrain';
 
+const MTX_IDENTITY: ReadonlyMat4 = mat4.create();
 
 const canvas = document.getElementById("canvas") as HTMLCanvasElement;
 const gl = canvas.getContext("webgl", { stencil: true, alpha: true });
 
 
-const vertexShader = `
-attribute vec3 aVertexPosition;
-attribute vec4 aVertexColor;
-uniform mat4 uModel;
-uniform mat4 uView;
-uniform mat4 uProjection;
-varying vec4 vColor;
-void main() {
-    gl_Position = uProjection * uView * uModel * vec4(aVertexPosition,1);
-    vColor = aVertexColor;
-}
-`;
 
-const fragmentShader = `
-precision mediump float;
-varying vec4 vColor;
-void main() {
-    gl_FragColor = vColor;
-}
-`;
-
-
-const defaultProgram = loadProgram(gl, vertexShader, fragmentShader);
-
+const defaultProgram = LoadProgram(gl, SHADER_VERTEX_DEFAULT, SHADER_FRAGMENT_DEFAULT);
 const aVertexPosition = gl.getAttribLocation(defaultProgram, 'aVertexPosition');
 const aVertexColor = gl.getAttribLocation(defaultProgram, 'aVertexColor');
 const uProjection = gl.getUniformLocation(defaultProgram, 'uProjection');
 const uView = gl.getUniformLocation(defaultProgram, 'uView');
 const uModel = gl.getUniformLocation(defaultProgram, 'uModel');
-
-
 
 
 const meshQuad = CreateMesh(
@@ -55,97 +34,17 @@ const meshQuad = CreateMesh(
     [0, 1, 2, 3]
 );
 
-const extruded = extrude(
-    [
-        [-1, -1, 0],
-        [1, -1, 0],
-        [-1, 1, 0],
-        [1, 1, 0],
-    ],
-    [0, 1, 2, 3]
-    , .7
-);
-const meshBlock = CreateMesh(
-    gl,
-    extruded.vertices,
-    extruded.indices,
-);
 const meshesPieces = CreateMeshesForPieces(gl);
-console.log(meshesPieces);
 
-const terrainPts: vec3[] = [];
-const terrainCls = [];
-const terrainIdx = [];
-const TERRAIN_SIZE = 0.5;
-const terrainStride = 20;
-for (let z = -5; z < 7; z++) {
-    for (let x = -10; x < 10; x++) {
-        const y = 0 + Math.random() * 0.3;
-        terrainPts.push([x * TERRAIN_SIZE, y * TERRAIN_SIZE, z * TERRAIN_SIZE]);
 
-        // This was a bug, but ended up looking cool.
-        terrainCls.push(Math.floor(Math.random() * 255), 0, Math.floor(Math.random() * 255), 255);
-        terrainCls.push((x + 10) * 10, 0, (z + 10) * 10, 255);
-    }
-}
-let i = 0;
-for (let z = -5; z < 6; z++) {
-
-    for (let x = -10; x < 9; x++) {
-        terrainIdx.push(i, i + 1, i + terrainStride + 1, i + terrainStride + 1, i + terrainStride, i);
-        //terrainIdx.push(i, i + 1, i + terrainStride);
-        i++;
-    }
-    //i += terrainStride / 2;
-    i++;
-}
-console.log(terrainIdx.length, "terrainIdx");
+const { meshTerrain, colorsTerrain } = CreateTerrain(gl);
 
 
 
-
-const meshTerrain = CreateMesh(gl, terrainPts, terrainIdx);
-const clrTerrain = gl.createBuffer();
-gl.bindBuffer(gl.ARRAY_BUFFER, clrTerrain);
-gl.bufferData(gl.ARRAY_BUFFER, new Uint8Array(terrainCls), gl.STATIC_DRAW);
-
-
-const colors = [
-    255, 0, 0, 255,
-    0, 255, 0, 255,
-    0, 0, 255, 255,
-    255, 255, 255, 255
-];
-const clrQuad = gl.createBuffer();
-gl.bindBuffer(gl.ARRAY_BUFFER, clrQuad);
-gl.bufferData(gl.ARRAY_BUFFER, new Uint8Array(colors), gl.STATIC_DRAW);
-
-
-const vertexBuffer = gl.createBuffer();
-gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
-const vtx = [
-    0, .5, 0,
-    -.5, -.5, 0,
-    .5, -.5, 0
-];
-gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vtx), gl.STATIC_DRAW);
-
-gl.clearColor(0, 0, 0, 0);
-
-
-
-// const logo = `
-//  /--
-//  V  )  +---    /&    &  /|           
-//     )  |   )  /  &   |&/ |          
-//  /--   +---   +---+  | V |        
-// /      |   )  |   |  |   |         
-// -----  +---   -   -  -   -
-// `;
 const logo = `
   /--
   V  )  +---     ^    &  /|           
-     )  |   )  /  &   )&/ |          
+     )  |   )  /  &   )&/ )          
   /--   +---   +---+  | V |        
  /      |   )  |   |  |   |         
  -----  +---   -   -  -   -
@@ -174,7 +73,6 @@ function makePieces() {
     }
 
     const all = levels.flat();
-    console.log(all);
 
     const withNeeds = all.map(e => {
         //const needs = prevLevel.filter(e => Math.abs(e.gx - gx) <= 1).map(e => e.uid);
@@ -217,9 +115,9 @@ const actors: Actor[] = [
     new Actor(world, [1, 0, 1]),
 ];
 
-function scatter(ps: Piece[]) {
+function Scatter(ps: Piece[]) {
     for (const a of actors) {
-        a.state.Release();
+        a.state.Stop();
     }
 
     for (const p of ps) {
@@ -238,13 +136,11 @@ function scatter(ps: Piece[]) {
 
 
 
-//const piecesQuads = new Quads(pieces.length);
-
 
 export const mtxInvView = mat4.create();//FIXME: awkward
 export const mtxSprite = mat4.create();//FIXME: awkward
 
-export function drawSprite(gl: WebGLRenderingContext, at: ReadonlyVec3, color: ReadonlyVec4, mode: 'actor' | 'piece') {
+export function DrawSprite(gl: WebGLRenderingContext, at: ReadonlyVec3, color: ReadonlyVec4, mode: 'actor' | 'piece') {
     const mtxModel = mat4.create();
     mat4.identity(mtxModel);
     mat4.translate(mtxModel, mtxModel, at);
@@ -252,10 +148,10 @@ export function drawSprite(gl: WebGLRenderingContext, at: ReadonlyVec3, color: R
         mat4.mul(mtxModel, mtxModel, mtxSprite);
     mat4.scale(mtxModel, mtxModel, [0.1, 0.1, 0.1]);
 
-    drawQuad(gl, mtxModel, color);
+    DrawQuad(gl, mtxModel, color);
 }
 
-export function drawQuad(gl: WebGLRenderingContext, transform: mat4, color: ReadonlyVec4) {
+export function DrawQuad(gl: WebGLRenderingContext, transform: mat4, color: ReadonlyVec4) {
     gl.uniformMatrix4fv(uModel, false, transform);
 
     gl.bindBuffer(gl.ARRAY_BUFFER, meshQuad.vertices);
@@ -291,10 +187,49 @@ export function DrawMesh(gl: WebGLRenderingContext, transform: mat4, mesh: Mesh)
     gl.disableVertexAttribArray(aVertexColor);
     gl.vertexAttrib4fv(aVertexColor, [1, 1, 0.5, 1]);
 
-    console.log(mesh.indexCount);
     gl.drawElements(gl.TRIANGLE_STRIP, mesh.indexCount, gl.UNSIGNED_SHORT, 0);
 
 }
+
+function DrawTerrain(gl: WebGLRenderingContext, meshTerrain: Mesh, colorsTerrain: WebGLBuffer) {
+    gl.uniformMatrix4fv(uModel, false, MTX_IDENTITY);
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, meshTerrain.vertices);
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, meshTerrain.indices);
+    gl.enableVertexAttribArray(aVertexPosition);
+    gl.vertexAttribPointer(aVertexPosition, 3, gl.FLOAT, false, 0, 0); //!
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, colorsTerrain);
+    gl.enableVertexAttribArray(aVertexColor);
+    gl.vertexAttribPointer(aVertexColor, 4, gl.UNSIGNED_BYTE, true, 0, 0); //!
+
+    gl.drawElements(gl.TRIANGLES, meshTerrain.indexCount, gl.UNSIGNED_SHORT, 0);
+
+    // Also draw a wireframe on top
+    gl.disableVertexAttribArray(aVertexColor);
+    gl.vertexAttrib4f(aVertexColor, .13, .13, .13, 1);
+    gl.drawElements(gl.LINES, meshTerrain.indexCount, gl.UNSIGNED_SHORT, 0);
+}
+
+function ApplyStencil() {
+    gl.viewport(0, 0, canvas.width, canvas.height);
+
+    //FIXME: do a shader specially for the stencil, move to stencil.ts
+    gl.clear(gl.STENCIL_BUFFER_BIT);
+    gl.useProgram(defaultProgram);
+    gl.disableVertexAttribArray(aVertexColor);
+    gl.vertexAttrib4f(aVertexColor, 1, 1, 1, 1);
+    gl.uniformMatrix4fv(uProjection, false, mat4.create());
+    gl.uniformMatrix4fv(uView, false, mat4.create());
+    gl.uniformMatrix4fv(uModel, false, mat4.create());
+    gl.enableVertexAttribArray(aVertexPosition);
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, GetStencilBuffer(gl).vertices);
+    gl.vertexAttribPointer(aVertexPosition, 3, gl.FLOAT, false, 0, 0,); // Needs buffer bound!
+
+    DrawStencil(gl);
+}
+
 
 let lastTime: number;
 function frame(timeMillis: number) {
@@ -327,32 +262,11 @@ function frame(timeMillis: number) {
 
     gl.viewport(0, 0, canvas.width, canvas.height);
 
-    {
-        //FIXME: do a shader specially for the stencil, move to stencil.ts
-        gl.clear(gl.STENCIL_BUFFER_BIT);
-        gl.useProgram(defaultProgram);
-        gl.disableVertexAttribArray(aVertexColor);
-        gl.vertexAttrib4f(aVertexColor, 1, 1, 1, 1);
-        gl.uniformMatrix4fv(uProjection, false, mat4.create());
-        gl.uniformMatrix4fv(uView, false, mat4.create());
-        gl.uniformMatrix4fv(uModel, false, mat4.create());
-        gl.enableVertexAttribArray(aVertexPosition);
+    //FIXME: Why do we have to do it each frame?  If we never clear the Stencil Buffer? Maybe because of the viewport, but otherwise (if not changed) why?
+    ApplyStencil();
 
-        gl.bindBuffer(gl.ARRAY_BUFFER, GetStencilBuffer(gl).vertices);
-        gl.vertexAttribPointer(aVertexPosition, 3, gl.FLOAT, false, 0, 0,); // Needs buffer bound!
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-        DrawStencil(gl);
-    }
-
-    gl.clear(gl.COLOR_BUFFER_BIT);
-    //gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT | gl.STENCIL_BUFFER_BIT);
-
-
-
-    // gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer)
-    // gl.vertexAttribPointer(aVertexPosition, 3, gl.FLOAT, false, 0, 0); //!
-    // gl.enableVertexAttribArray(aVertexPosition);
-    // gl.drawArrays(gl.TRIANGLES, 0, 3);
     gl.useProgram(defaultProgram);
 
 
@@ -375,53 +289,16 @@ function frame(timeMillis: number) {
     mat4.translate(mtxSprite, mtxInvView, lookAtViewTranslation);
 
 
-    {
-        mat4.identity(mtxModel);
-        mat4.translate(mtxModel, mtxModel, [0, 0, 0]);
-        gl.uniformMatrix4fv(uModel, false, mtxModel);
 
-        gl.bindBuffer(gl.ARRAY_BUFFER, meshTerrain.vertices);
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, meshTerrain.indices);
-        gl.enableVertexAttribArray(aVertexPosition);
-        gl.vertexAttribPointer(aVertexPosition, 3, gl.FLOAT, false, 0, 0); //!
+    DrawTerrain(gl, meshTerrain, colorsTerrain);
 
 
-        gl.bindBuffer(gl.ARRAY_BUFFER, clrTerrain);
-        gl.enableVertexAttribArray(aVertexColor);
-        gl.vertexAttribPointer(aVertexColor, 4, gl.UNSIGNED_BYTE, true, 0, 0); //!
-        gl.drawElements(gl.TRIANGLES, terrainIdx.length, gl.UNSIGNED_SHORT, 0);
-
-        // Draw wireframe on top
-        gl.disableVertexAttribArray(aVertexColor);
-        gl.vertexAttrib4f(aVertexColor, .13, .13, .13, 1);
-        gl.drawElements(gl.LINES, terrainIdx.length, gl.UNSIGNED_SHORT, 0);
-    }
-    {
-        // mat4.identity(mtxModel);
-
-        // gl.uniformMatrix4fv(uModel, false, mtxModel);
-
-        // gl.bindBuffer(gl.ARRAY_BUFFER, meshQuad.vertices);
-        // gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, meshQuad.indices);
-        // gl.enableVertexAttribArray(aVertexPosition);
-        // gl.vertexAttribPointer(aVertexPosition, 3, gl.FLOAT, false, 0, 0); //!
-
-
-        // gl.bindBuffer(gl.ARRAY_BUFFER, clrQuad);
-        // gl.enableVertexAttribArray(aVertexColor);
-        // gl.vertexAttribPointer(aVertexColor, 4, gl.UNSIGNED_BYTE, true, 0, 0); //!
-
-
-        //gl.disableVertexAttribArray(aVertexColor);
-        //gl.vertexAttrib4f(aVertexColor, 1, 0, 0, 1);
-        //gl.drawElements(gl.TRIANGLE_STRIP, 4, gl.UNSIGNED_SHORT, 0);
-    }
-
-    drawSprite(gl, [1, 0, 0], [1, 0, 1, 1], 'actor');
-    drawSprite(gl, [1, 1, 0], [1, .5, 1, 1], 'actor');
-    drawSprite(gl, [1, 0, 1], [1, 0, .5, 1], 'actor');
-    drawSprite(gl, [1, 1, 1], [.5, 0, 1, 1], 'actor');
-    drawSprite(gl, [-1, 1, 1], [.5, 0, 1, 1], 'actor');
+    // Draw flying sprites
+    DrawSprite(gl, [1, 0, 0], [1, 0, 1, 1], 'actor');
+    DrawSprite(gl, [1, 1, 0], [1, .5, 1, 1], 'actor');
+    DrawSprite(gl, [1, 0, 1], [1, 0, .5, 1], 'actor');
+    DrawSprite(gl, [1, 1, 1], [.5, 0, 1, 1], 'actor');
+    DrawSprite(gl, [-1, 1, 1], [.5, 0, 1, 1], 'actor');
     //drawSprite(gl, [-1, 1, 2], [.5, 1, 1, 1], 'actor');
 
 
@@ -444,7 +321,8 @@ function frame(timeMillis: number) {
     requestAnimationFrame(frame);
 }
 
-function actorsThink() {
+// High level coordination for the actors
+function scheduleActorsThink() {
     const notPlaced = pieces.filter(p => !world.placed.has(p.uid));
     if (notPlaced.length === 0 && actors.every(actor => actor.state.CanDance())) {
         for (const actor of actors) {
@@ -480,22 +358,31 @@ function actorsThink() {
         }
     }
 
-    setTimeout(actorsThink, 100);
-}
-actorsThink();
-
-
-
-function tap(ev: Event) {
-    //console.log(ev);
-    //TODO: where you click is the center of the explosion
-    scatter([...world.placed.values()]);
+    setTimeout(scheduleActorsThink, 100);
 }
 
-lastTime = performance.now() / 1000.0;
-requestAnimationFrame(frame);
+function WebGLSetup() {
+    gl.clearColor(0, 0, 0, 0);
+}
 
-setTimeout(() => scatter(pieces), 1000);
+function Setup() {
+    WebGLSetup();
 
-canvas.addEventListener('click', tap);
-canvas.addEventListener('touchstart', tap);
+    ApplyStencil();
+
+    lastTime = performance.now() / 1000.0;
+    requestAnimationFrame(frame);
+    scheduleActorsThink();
+
+    // One shot initial scatter after a second
+    setTimeout(() => Scatter(pieces), 1000);
+
+    function tap(ev: Event) {
+        Scatter([...world.placed.values()]);
+    }
+
+    canvas.addEventListener('click', tap);
+    canvas.addEventListener('touchstart', tap);
+}
+
+Setup();

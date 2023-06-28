@@ -21,19 +21,17 @@ export function CreateStencilVertexBuffer(gl: WebGLRenderingContext) {
 }
 
 export function GetStencilBuffer(gl: WebGLRenderingContext) {
+    //FIXME: gross
     if (!_buffer) _buffer = CreateStencilVertexBuffer(gl);
     return _buffer;
 }
-
 
 export function DrawStencil(gl: WebGLRenderingContext) {
     if (!_buffer) _buffer = CreateStencilVertexBuffer(gl);
     const { vertices, vertexCount } = _buffer;
 
-    // { //TODO: try and remove this
-    //     gl.enable(gl.STENCIL_TEST);
-    //     gl.stencilFunc(gl.ALWAYS, STENCIL_REFVAL, STENCIL_MASK);
-    // }
+    gl.enable(gl.STENCIL_TEST);
+    gl.stencilFunc(gl.ALWAYS, STENCIL_REFVAL, STENCIL_MASK);
 
     // Write to the stencil regardless of stencil and depth buffers.
     // But don't write to depth or color.
@@ -51,8 +49,6 @@ export function DrawStencil(gl: WebGLRenderingContext) {
     gl.depthMask(true);
     gl.colorMask(true, true, true, true);
 
-    // Finally enable stencil testing for further operations
-    gl.enable(gl.STENCIL_TEST);
+    // Finally enable actual stencil testing for further operations
     gl.stencilFunc(gl.EQUAL, STENCIL_REFVAL, STENCIL_MASK);
-
 }
