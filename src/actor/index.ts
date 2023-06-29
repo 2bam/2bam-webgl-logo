@@ -1,8 +1,8 @@
 import { ReadonlyVec3, mat4, vec3 } from "gl-matrix";
-import { Piece } from "./piece";
-import { World } from "./world";
-import { DrawQuad, DrawSprite, mtxInvView, mtxSprite } from ".";
-import { DEG_TO_RAD } from "./utils";
+import { Piece } from "../piece";
+import { World } from "../world";
+import { DrawActorQuadTEMP, DrawQuad, mtxSprite } from "..";
+import { DEG_TO_RAD } from "../utils";
 
 const ACTOR_REACH_THRESHOLD = 0.01;
 const SPEED = 9;
@@ -103,7 +103,7 @@ abstract class ActorState {
         mat4.scale(xf, xf, [0.1, 0.1, 0.1]);
 
         //FIXME: Coupled to DrawQuad in index.ts
-        DrawQuad(gl, xf, [0, 1, 0, 1]);
+        DrawActorQuadTEMP(gl, xf, [0, 1, 0, 1]);
     }
 
     //

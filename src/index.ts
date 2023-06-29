@@ -1,26 +1,45 @@
 import { vec3, mat4, ReadonlyVec3, ReadonlyVec4, ReadonlyMat4 } from 'gl-matrix';
-import { DEG_TO_RAD, LoadProgram } from './utils';
+import { DEG_TO_RAD, LoadMaterial, LoadProgram, Material } from './utils';
 import { CreateMeshesForPieces, Piece, UpdatePieceTransform } from './piece';
 import { Actor } from './actor';
 import { World } from './world';
 import { DrawStencil, GetStencilBuffer } from './stencil';
 import { CreateMesh, Mesh } from './mesh';
-import { SHADER_VERTEX_DEFAULT, SHADER_FRAGMENT_DEFAULT } from './shaders';
+import { SHADER_VERTEX_DEFAULT, SHADER_FRAGMENT_DEFAULT, SHADER_VERTEX_TEXTURE, SHADER_FRAGMENT_TEXTURE, SHADER_VERTEX_STENCIL, SHADER_FRAGMENT_STENCIL } from './shaders';
 import { CreateTerrain } from './terrain';
+import ImgRat from '../assets/rat.png';
 
 const MTX_IDENTITY: ReadonlyMat4 = mat4.create();
 
 const canvas = document.getElementById("canvas") as HTMLCanvasElement;
 const gl = canvas.getContext("webgl", { stencil: true, alpha: true });
 
+let texRat: WebGLTexture;
 
+const materialDefault = LoadMaterial(
+    gl,
+    SHADER_VERTEX_DEFAULT,
+    SHADER_FRAGMENT_DEFAULT,
+    ["aVertexPosition", "aVertexColor", "aTexCoord"],
+    ["uProjection", "uView", "uModel"]
+);
 
-const defaultProgram = LoadProgram(gl, SHADER_VERTEX_DEFAULT, SHADER_FRAGMENT_DEFAULT);
-const aVertexPosition = gl.getAttribLocation(defaultProgram, 'aVertexPosition');
-const aVertexColor = gl.getAttribLocation(defaultProgram, 'aVertexColor');
-const uProjection = gl.getUniformLocation(defaultProgram, 'uProjection');
-const uView = gl.getUniformLocation(defaultProgram, 'uView');
-const uModel = gl.getUniformLocation(defaultProgram, 'uModel');
+const materialStencil = LoadMaterial(
+    gl,
+    SHADER_VERTEX_STENCIL,
+    SHADER_FRAGMENT_STENCIL,
+    ["aVertexPosition"],
+    []
+);
+
+// const defaultProgram = LoadProgram(gl, SHADER_VERTEX_DEFAULT, SHADER_FRAGMENT_DEFAULT);
+// const aVertexPosition = gl.getAttribLocation(defaultProgram, 'aVertexPosition');
+// const aVertexColor = gl.getAttribLocation(defaultProgram, 'aVertexColor');
+// const uProjection = gl.getUniformLocation(defaultProgram, 'uProjection');
+// const uView = gl.getUniformLocation(defaultProgram, 'uView');
+// const uModel = gl.getUniformLocation(defaultProgram, 'uModel');
+//
+// const matRat = LoadMaterial(gl, SHADER_VERTEX_TEXTURE, SHADER_FRAGMENT_TEXTURE, ["aVertexPosition", "aVertexColor", "aTexCoord"], ["uProjection", "uView", "uModel", "uTexture"]);
 
 
 const meshQuad = CreateMesh(
@@ -140,18 +159,24 @@ function Scatter(ps: Piece[]) {
 export const mtxInvView = mat4.create();//FIXME: awkward
 export const mtxSprite = mat4.create();//FIXME: awkward
 
-export function DrawSprite(gl: WebGLRenderingContext, at: ReadonlyVec3, color: ReadonlyVec4, mode: 'actor' | 'piece') {
-    const mtxModel = mat4.create();
-    mat4.identity(mtxModel);
-    mat4.translate(mtxModel, mtxModel, at);
-    if (mode === 'actor') // Actor always facing camera
-        mat4.mul(mtxModel, mtxModel, mtxSprite);
-    mat4.scale(mtxModel, mtxModel, [0.1, 0.1, 0.1]);
+// export function DrawSprite(gl: WebGLRenderingContext, at: ReadonlyVec3, color: ReadonlyVec4, mode: 'actor' | 'piece') {
+//     const mtxModel = mat4.create();
+//     mat4.identity(mtxModel);
+//     mat4.translate(mtxModel, mtxModel, at);
+//     if (mode === 'actor') // Actor always facing camera
+//         mat4.mul(mtxModel, mtxModel, mtxSprite);
+//     mat4.scale(mtxModel, mtxModel, [0.1, 0.1, 0.1]);
 
-    DrawQuad(gl, mtxModel, color);
+//     DrawQuad(gl, mtxModel, color);
+// }
+
+export function DrawActorQuadTEMP(gl: WebGLRenderingContext, transform: mat4, color: ReadonlyVec4) {
+    DrawQuad(gl, transform, color, materialDefault);
 }
 
-export function DrawQuad(gl: WebGLRenderingContext, transform: mat4, color: ReadonlyVec4) {
+export function DrawQuad(gl: WebGLRenderingContext, transform: mat4, color: ReadonlyVec4, material: Material<'aVertexPosition' | 'aVertexColor', 'uModel'>) {
+    const { attrib: { aVertexPosition, aVertexColor }, uniform: { uModel } } = material;
+
     gl.uniformMatrix4fv(uModel, false, transform);
 
     gl.bindBuffer(gl.ARRAY_BUFFER, meshQuad.vertices);
@@ -172,7 +197,9 @@ export function DrawQuad(gl: WebGLRenderingContext, transform: mat4, color: Read
 
 //FIXME: Move to Mesh.ts and pass around a context/info instead of "gl" with the programs and attribs/uniform locations
 //FIXME: This func is the bottleneck
-export function DrawMesh(gl: WebGLRenderingContext, transform: mat4, mesh: Mesh) {
+export function DrawMesh(gl: WebGLRenderingContext, transform: mat4, mesh: Mesh, material: Material<'aVertexPosition' | 'aVertexColor', 'uModel'>) {
+    const { attrib: { aVertexPosition, aVertexColor }, uniform: { uModel } } = material;
+
     gl.uniformMatrix4fv(uModel, false, transform);
 
     gl.bindBuffer(gl.ARRAY_BUFFER, mesh.vertices);
@@ -191,7 +218,9 @@ export function DrawMesh(gl: WebGLRenderingContext, transform: mat4, mesh: Mesh)
 
 }
 
-function DrawTerrain(gl: WebGLRenderingContext, meshTerrain: Mesh, colorsTerrain: WebGLBuffer) {
+function DrawTerrain(gl: WebGLRenderingContext, meshTerrain: Mesh, colorsTerrain: WebGLBuffer, material: Material<'aVertexPosition' | 'aVertexColor', 'uModel'>) {
+    const { attrib: { aVertexPosition, aVertexColor }, uniform: { uModel } } = material;
+
     gl.uniformMatrix4fv(uModel, false, MTX_IDENTITY);
 
     gl.bindBuffer(gl.ARRAY_BUFFER, meshTerrain.vertices);
@@ -212,18 +241,13 @@ function DrawTerrain(gl: WebGLRenderingContext, meshTerrain: Mesh, colorsTerrain
 }
 
 function ApplyStencil() {
+    const { program, attrib: { aVertexPosition } } = materialStencil;
     gl.viewport(0, 0, canvas.width, canvas.height);
 
     //FIXME: do a shader specially for the stencil, move to stencil.ts
     gl.clear(gl.STENCIL_BUFFER_BIT);
-    gl.useProgram(defaultProgram);
-    gl.disableVertexAttribArray(aVertexColor);
-    gl.vertexAttrib4f(aVertexColor, 1, 1, 1, 1);
-    gl.uniformMatrix4fv(uProjection, false, mat4.create());
-    gl.uniformMatrix4fv(uView, false, mat4.create());
-    gl.uniformMatrix4fv(uModel, false, mat4.create());
+    gl.useProgram(program);
     gl.enableVertexAttribArray(aVertexPosition);
-
     gl.bindBuffer(gl.ARRAY_BUFFER, GetStencilBuffer(gl).vertices);
     gl.vertexAttribPointer(aVertexPosition, 3, gl.FLOAT, false, 0, 0,); // Needs buffer bound!
 
@@ -267,7 +291,7 @@ function frame(timeMillis: number) {
 
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-    gl.useProgram(defaultProgram);
+    gl.useProgram(materialDefault.program);
 
 
     const mtxProjection = mat4.create();
@@ -280,26 +304,24 @@ function frame(timeMillis: number) {
     const m = 0.1;
     mat4.lookAt(mtxView, [Math.cos(t) * m, Math.sin(t) * m + 1, 3], [0, 0, 0], [0, 1, 0]);
 
-    gl.uniformMatrix4fv(uProjection, false, mtxProjection);
-    gl.uniformMatrix4fv(uView, false, mtxView);
+    gl.uniformMatrix4fv(materialDefault.uniform.uProjection, false, mtxProjection);
+    gl.uniformMatrix4fv(materialDefault.uniform.uView, false, mtxView);
 
     mat4.invert(mtxInvView, mtxView);
     const lookAtViewTranslation = vec3.create();
     mat4.getTranslation(lookAtViewTranslation, mtxView);
     mat4.translate(mtxSprite, mtxInvView, lookAtViewTranslation);
 
-
-
-    DrawTerrain(gl, meshTerrain, colorsTerrain);
+    DrawTerrain(gl, meshTerrain, colorsTerrain, materialDefault);
 
 
     // Draw flying sprites
-    DrawSprite(gl, [1, 0, 0], [1, 0, 1, 1], 'actor');
-    DrawSprite(gl, [1, 1, 0], [1, .5, 1, 1], 'actor');
-    DrawSprite(gl, [1, 0, 1], [1, 0, .5, 1], 'actor');
-    DrawSprite(gl, [1, 1, 1], [.5, 0, 1, 1], 'actor');
-    DrawSprite(gl, [-1, 1, 1], [.5, 0, 1, 1], 'actor');
-    //drawSprite(gl, [-1, 1, 2], [.5, 1, 1, 1], 'actor');
+    // DrawSprite(gl, [1, 0, 0], [1, 0, 1, 1], 'actor');
+    // DrawSprite(gl, [1, 1, 0], [1, .5, 1, 1], 'actor');
+    // DrawSprite(gl, [1, 0, 1], [1, 0, .5, 1], 'actor');
+    // DrawSprite(gl, [1, 1, 1], [.5, 0, 1, 1], 'actor');
+    // DrawSprite(gl, [-1, 1, 1], [.5, 0, 1, 1], 'actor');
+    ////drawSprite(gl, [-1, 1, 2], [.5, 1, 1, 1], 'actor');
 
 
     // for (const piece of pieces) {
@@ -310,12 +332,16 @@ function frame(timeMillis: number) {
     for (const actor of actors) {
         actor.state.OnUpdate(time, deltaTime);
         //console.log(actor.state.constructor.name);
+
+        //l.bindTexture(gl.TEXTURE_2D, texRat);
+        //gl.useProgram(texProgram);
+
         actor.state.OnDraw(gl);
     }
 
     for (const piece of pieces) {
         //if (placed.has(piece.uid))
-        DrawMesh(gl, piece.transform, piece.mesh);
+        DrawMesh(gl, piece.transform, piece.mesh, materialDefault);
     }
 
     requestAnimationFrame(frame);
@@ -361,12 +387,36 @@ function scheduleActorsThink() {
     setTimeout(scheduleActorsThink, 100);
 }
 
-function WebGLSetup() {
+
+async function LoadImage(src: string): Promise<HTMLImageElement> {
+    return new Promise((resolve, reject) => {
+        const image = new Image();
+        image.onload = () => resolve(image);
+        image.onerror = (err) => reject(err);
+        image.src = src;
+    });
+}
+
+
+
+async function WebGLSetup(gl: WebGLRenderingContext) {
+    const imgRat = await LoadImage(ImgRat);
+    texRat = gl.createTexture();
+
+    gl.bindTexture(gl.TEXTURE_2D, texRat);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGB5_A1, gl.UNSIGNED_SHORT_5_5_5_1, imgRat);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+
     gl.clearColor(0, 0, 0, 0);
 }
 
-function Setup() {
-    WebGLSetup();
+
+
+async function Main(canvas: HTMLCanvasElement) {
+    const gl = canvas.getContext("webgl");
+    await WebGLSetup(gl);
 
     ApplyStencil();
 
@@ -383,6 +433,11 @@ function Setup() {
 
     canvas.addEventListener('click', tap);
     canvas.addEventListener('touchstart', tap);
+
+    canvas.addEventListener("webglcontextlost", () => {
+        // Easy peasy
+        location.reload();
+    });
 }
 
-Setup();
+Main(canvas).then();

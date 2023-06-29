@@ -4,8 +4,6 @@ run-name: Build with Node 20 and Webpack and Deploy to GH Pages (${{ github.acto
 on:
   push:
     branches: [ "master" ]
-  pull_request:
-    branches: [ "master" ]
 
 jobs:
   build:

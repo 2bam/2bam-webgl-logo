@@ -22,11 +22,19 @@
             display: block;
         }
 
-        #legend {
+        div {
             padding-top: 30px;
             color: #fff;
             font-family: monospace;
             max-width: 800px;
+        }
+
+        #tap-message {
+            display: table;
+            font-size: 24pt;
+        }
+
+        #legend {
             font-size: 16pt;
         }
 
@@ -39,8 +47,10 @@
 <body>
     <canvas id="canvas" class="centered" width="800" height="400"></canvas>
 
+    <!-- <div id="tap-message" class="centered">👆 Tap me!</div> -->
+
     <div id="legend" class="centered">
-        This project was done in a week or so to replace my old webpage header and showcase some skills
+        <p>This project was done in a week or so to replace my old webpage header and showcase some skills </p>
         <ul>
             <li> TypeScript </li>
             <li> Vanilla WebGL</li>
@@ -49,8 +59,12 @@
             <li> Github Actions to build and deploy to its own Github Page</li>
             <li> Some Object oriented, Data oriented, Functional approaches.
         </ul>
-        Access its source code here:<br>
-        <a href="https://github.com/2bam/2bam-webgl-logo">https://github.com/2bam/2bam-webgl-logo</a>
+
+        <p>
+            Access its source code here:<br>
+            <a href="https://github.com/2bam/2bam-webgl-logo">https://github.com/2bam/2bam-webgl-logo</a>
+        </p>
+        <p>(You can tap the logo to explode it again)</p>
     </div>
 
 </body>

@@ -8,6 +8,7 @@
     "moduleResolution": "NodeNext"
   },
   "files": [
-    "src/index.ts"
+    "src/index.ts",
+    "src/ts-import-png-workaround.d.ts"
   ]
 }
