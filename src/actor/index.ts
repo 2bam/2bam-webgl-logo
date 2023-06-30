@@ -116,7 +116,7 @@ abstract class ActorState {
         //mat4.scale(xf, xf, [0.1, 0.1, 0.1]);
         //mat4.scale(xf, xf, [0.25, 0.25, 0.25]); //!!!
         mat4.scale(xf, xf, [0.33, 0.33, 0.33]);
-        if (this._actor.facingX < 0 || this._actor.wiggle < 0) mat4.scale(xf, xf, [-1, 1, 1]);
+        if (this._actor.facingX * this._actor.wiggle < 0) mat4.scale(xf, xf, [-1, 1, 1]);
 
         return xf;
 
