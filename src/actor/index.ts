@@ -26,6 +26,7 @@ export class Actor {
         this.state = new InitialState(this);
         this.transform = mat4.create();
         this.wiggle = 0;
+        this.facingX = Math.random() < 0.5 ? -1 : 1;
     }
 
     ChangeState(newState: ActorState) {
@@ -116,7 +117,10 @@ abstract class ActorState {
         //mat4.scale(xf, xf, [0.1, 0.1, 0.1]);
         //mat4.scale(xf, xf, [0.25, 0.25, 0.25]); //!!!
         mat4.scale(xf, xf, [0.33, 0.33, 0.33]);
-        if (this._actor.facingX * this._actor.wiggle < 0) mat4.scale(xf, xf, [-1, 1, 1]);
+
+        let xFlip = this._actor.facingX < 0;
+        if (this._actor.wiggle < 0) xFlip = !xFlip;
+        if (xFlip) mat4.scale(xf, xf, [-1, 1, 1]);
 
         return xf;
 
