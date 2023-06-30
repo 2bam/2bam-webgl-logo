@@ -35,7 +35,7 @@ export async function CreateContext(canvas: HTMLCanvasElement) {
     const uvsBasic = gl.createBuffer();
     if (!uvsBasic) throw new Error('Error creating buffer');
     gl.bindBuffer(gl.ARRAY_BUFFER, uvsBasic);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(CreateTileMapUVs(4, 2, 5)), gl.STATIC_DRAW);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(CreateTileMapUVs(4, 2, 6)), gl.STATIC_DRAW);
 
     gl.disable(gl.CULL_FACE);
 

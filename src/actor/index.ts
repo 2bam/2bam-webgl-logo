@@ -7,7 +7,7 @@ import { Context } from "../context";
 
 const ACTOR_REACH_THRESHOLD = 0.01;
 const SPEED = 9;
-const SCARE_TTL_BASE = 0.2;
+const SCARE_TTL_BASE = 0.15;
 const SCARE_JUMP_HEIGHT = 0.5;
 
 export class Actor {
@@ -160,11 +160,12 @@ class InitialState extends IdleState {
         this._actor.ChangeState(new ScareState(this._actor));
         return true;
     }
+    GetFrame(_time: number) { return 2; }
 }
 
 class DanceState extends ActorState {
     override OnUpdate(time: number, deltaTime: number) {
-        this._actor.wiggle = Math.sin(time * 5);
+        this._actor.wiggle = Math.sin(time * 10);
     }
 
     override OnExit() {
@@ -282,9 +283,13 @@ class ScareState extends ActorState {
             this._actor.ChangeState(new ClimbDownState(this._actor));
         }
         else {
-            const h = 1 - Math.abs(t * 2 - 1);
+            //const h = 1 - Math.abs(t * 2 - 1);
+            const h = t < 0.2 ? (t / 0.2) : (1 - (t - 0.2) / 0.8);
             vec3.add(this._actor.position, this._startPosition, [0, h * SCARE_JUMP_HEIGHT, 0]);
             this._timeSinceStart += deltaTime;
         }
     }
+
+    override GetFrame(_time: number) { return 5; }
+
 }
