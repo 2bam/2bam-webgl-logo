@@ -228,8 +228,11 @@ function ScheduleFrameLoop(ctx: Context, world: World) {
         const { gl, canvas, materialDefault, meshTerrain, colorsTerrain } = ctx;
 
         const time = timeMillis / 1000.0;
-        const deltaTime = (time - lastTime);
+        const deltaTime = Math.min(time - lastTime, 1); // Clamp delta time in case window lost focus and gets too big
         lastTime = time;
+
+
+
         for (const piece of pieces) {
             if (placed.has(piece.uid)) {
                 continue;
