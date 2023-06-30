@@ -20,36 +20,41 @@ const LOGO = `
 
 const MTX_IDENTITY: ReadonlyMat4 = mat4.create();
 
-
-function MakePieces(logo: string, meshesPieces: { [ch: string]: Mesh; }) {
+function CreatePiecesWithDependencies(logo: string, meshesPieces: { [ch: string]: Mesh; }) {
     console.log(logo);
     const lines = logo.split('\n');
     lines.reverse();
 
+    const compactLines = lines
+        .map(l =>
+            [...l]
+                .map((ch, gx) => ({ ch, gx }))
+                .filter(e => e.ch !== ' ')
+        )
+        .filter(l => l.length > 0)
+        ;
+
     let nextPieceUid = 1;
-    const linesp = lines.map(l => [...l].map((ch, gx) => ({ ch, gx })).filter(e => e.ch !== ' ')).filter(l => l.length > 0);
-
-    const roots = linesp[0].map(({ ch, gx }) => ({ gx, gy: 0, ch, needs: [], uid: nextPieceUid++ }));
-    let prevLevel = roots;
-    const levels = [roots];
-    for (let gy = 1; gy < linesp.length; gy++) {
-        const currLevel = linesp[gy].map(({ ch, gx }) => {
-            return { gx, gy, ch, needs: [], uid: nextPieceUid++ };
-        });
-        levels.push(currLevel);
-        prevLevel = currLevel;
-    }
-
-    const all = levels.flat();
+    const characters = compactLines
+        .map(
+            (es, gy) => es.map(({ ch, gx }) => ({ gx, gy, ch, needs: [], uid: nextPieceUid++ }))
+        )
+        .flat()
+        ;
 
     // Here we connect dependencies so they grow the sign one piece after another instead of randomly
     // (which sometimes would make pieces look like they're flying)
-    const withNeeds = all.map(e => {
+    const withNeeds = characters.map(e => {
         //const needs = prevLevel.filter(e => Math.abs(e.gx - gx) <= 1).map(e => e.uid);
-        const needs = e.gy === 0 ? [] : all.filter(other => Math.abs(other.gx - e.gx) <= 1 && Math.abs(other.gy - e.gy) <= 1).map(e => e.uid);
+        const needs =
+            e.gy === 0
+                ? [] // Special case, make ground level pieces depend on nothing so they can be placed always
+                : characters
+                    .filter(other => Math.abs(other.gx - e.gx) <= 1 && Math.abs(other.gy - e.gy) <= 1)
+                    .map(e => e.uid);
+
         return { ...e, needs };
-    }
-    );
+    });
 
     const pieces: Piece[] = withNeeds.map(({ gx, gy, uid, needs, ch }) => {
         const position: vec3 = [gx * .2 - 3, gy * .2, 0];
@@ -71,7 +76,7 @@ function MakePieces(logo: string, meshesPieces: { [ch: string]: Mesh; }) {
 
 function Scatter(world: World) {
     for (const a of world.actors) {
-        a.state.Stop();
+        a.state.Scare();
     }
 
     for (const p of world.placed.values()) {
@@ -89,11 +94,6 @@ function Scatter(world: World) {
 }
 
 
-
-
-
-export const mtxInvView = mat4.create();//FIXME: awkward
-export const mtxSprite = mat4.create();//FIXME: awkward
 
 // export function DrawSprite(gl: WebGLRenderingContext, at: ReadonlyVec3, color: ReadonlyVec4, mode: 'actor' | 'piece') {
 //     const mtxModel = mat4.create();
@@ -193,6 +193,7 @@ function ApplyStencil({ gl, canvas, materialStencil }: Context) {
 
 function ScheduleFrameLoop(ctx: Context, world: World) {
     let lastTime: number = performance.now() / 1000.0;
+    const mtxInvView = mat4.create();
 
     function Frame(timeMillis: number) {
         const { pieces, placed, actors } = world;
@@ -248,7 +249,7 @@ function ScheduleFrameLoop(ctx: Context, world: World) {
         mat4.invert(mtxInvView, mtxView);
         const lookAtViewTranslation = vec3.create();
         mat4.getTranslation(lookAtViewTranslation, mtxView);
-        mat4.translate(mtxSprite, mtxInvView, lookAtViewTranslation);
+        mat4.translate(ctx.mtxSpriteFaceCamera, mtxInvView, lookAtViewTranslation);
 
         DrawTerrain(gl, meshTerrain, colorsTerrain, materialDefault);
 
@@ -330,14 +331,12 @@ function ScheduleActorsThink(world: World) {
 }
 
 async function WebGLSetup(gl: WebGLRenderingContext) {
-
-    const texRat = await LoadTexture(gl, ImgRat);
     gl.clearColor(0, 0, 0, 0);
 }
 
 function WorldSetup({ meshesPieces }: Context) {
     const world = new World();
-    const pieces = MakePieces(LOGO, meshesPieces);
+    const pieces = CreatePiecesWithDependencies(LOGO, meshesPieces);
     for (const piece of pieces) world.PlacePiece(piece);
 
     const actors: Actor[] = [];

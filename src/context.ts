@@ -3,6 +3,7 @@ import { SHADER_FRAGMENT_DEFAULT, SHADER_FRAGMENT_STENCIL, SHADER_VERTEX_DEFAULT
 import { CreateMesh } from './mesh';
 import { CreateMeshesForPieces } from './piece';
 import { CreateTerrain } from './terrain';
+import { mat4 } from "gl-matrix";
 
 // Contains several GL related elements necessary for rendering.
 
@@ -53,6 +54,9 @@ export async function CreateContext(canvas: HTMLCanvasElement) {
         meshesPieces: CreateMeshesForPieces(gl),
 
 /*{ meshTerrain, colorsTerrain } =*/ ...CreateTerrain(gl),
+
+        // Special transform updated each frame to make sprites face the camera
+        mtxSpriteFaceCamera: mat4.create()
 
     };
 };
