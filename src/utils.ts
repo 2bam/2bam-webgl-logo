@@ -14,7 +14,7 @@ function LoadShader(gl: WebGLRenderingContext, type: 'vertex' | 'fragment', sour
         console.error(`Couldn't compile ${type} shader`);
         console.error('Shader compiler log: ' + compilationLog);
         gl.deleteShader(shader);
-        throw new Error('Error copiling shader');
+        throw new Error('Error compiling shader');
     }
     return shader;
 }
@@ -96,7 +96,8 @@ export async function LoadTexture(gl: WebGLRenderingContext, src: string): Promi
             const tex = gl.createTexture();
             gl.bindTexture(gl.TEXTURE_2D, tex);
             gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
-            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGB5_A1, gl.UNSIGNED_SHORT_5_5_5_1, image);
+            //gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGB5_A1, gl.UNSIGNED_SHORT_5_5_5_1, image); FIXME: use this
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
 

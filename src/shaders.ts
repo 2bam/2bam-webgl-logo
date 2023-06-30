@@ -56,8 +56,9 @@ export const SHADER_FRAGMENT_TEXTURE = `
     precision mediump float;
     varying vec4 vColor;
     varying vec2 vTexCoord;
-    uniform sampler2D tex;
+    uniform sampler2D uTexture;
     void main() {
-        gl_FragColor = vColor * texture2D(uSampler, vTexCoord);
+        //gl_FragColor = vColor * texture2D(uTexture, vTexCoord);
+        gl_FragColor = texture2D(uTexture, vTexCoord);
     }
 `;

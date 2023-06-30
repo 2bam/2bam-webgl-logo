@@ -6,8 +6,6 @@ import { World } from './world';
 import { DrawStencil, GetStencilBuffer } from './stencil';
 import { Mesh } from './mesh';
 import { Context, CreateContext } from './context';
-import ImgRat from '../assets/rat.png';
-import ImgCheese from '../assets/cheese.png';
 
 const LOGO = `
   /--
@@ -118,11 +116,11 @@ export function DrawQuad({ gl, meshQuad }: Context, transform: mat4, color: Read
     gl.bindBuffer(gl.ARRAY_BUFFER, meshQuad.vertices);
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, meshQuad.indices);
     gl.enableVertexAttribArray(aVertexPosition);
-    gl.vertexAttribPointer(aVertexPosition, 3, gl.FLOAT, false, 0, 0); //!
+    gl.vertexAttribPointer(aVertexPosition, 3, gl.FLOAT, false, 0, 0);
 
     // gl.bindBuffer(gl.ARRAY_BUFFER, clrQuad);
     // gl.enableVertexAttribArray(aVertexColor);
-    // gl.vertexAttribPointer(aVertexColor, 4, gl.UNSIGNED_BYTE, true, 0, 0); //!
+    // gl.vertexAttribPointer(aVertexColor, 4, gl.UNSIGNED_BYTE, true, 0, 0); 
 
     gl.disableVertexAttribArray(aVertexColor);
     gl.vertexAttrib4f(aVertexColor, color[0], color[1], color[2], color[3]);
@@ -133,7 +131,7 @@ export function DrawQuad({ gl, meshQuad }: Context, transform: mat4, color: Read
 
 //FIXME: Move to Mesh.ts and pass around a context/info instead of "gl" with the programs and attribs/uniform locations
 //FIXME: This func is the bottleneck
-export function DrawMesh(gl: WebGLRenderingContext, transform: mat4, mesh: Mesh, material: Material<'aVertexPosition' | 'aVertexColor', 'uModel'>) {
+export function DrawMesh(gl: WebGLRenderingContext, transform: mat4, mesh: Mesh, material: Material<'aVertexPosition' | 'aVertexColor', 'uModel'>, tex?: WebGLTexture) {
     const { attrib: { aVertexPosition, aVertexColor }, uniform: { uModel } } = material;
 
     gl.uniformMatrix4fv(uModel, false, transform);
@@ -141,14 +139,45 @@ export function DrawMesh(gl: WebGLRenderingContext, transform: mat4, mesh: Mesh,
     gl.bindBuffer(gl.ARRAY_BUFFER, mesh.vertices);
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, mesh.indices);
     gl.enableVertexAttribArray(aVertexPosition);
-    gl.vertexAttribPointer(aVertexPosition, 3, gl.FLOAT, false, 0, 0); //!
+    gl.vertexAttribPointer(aVertexPosition, 3, gl.FLOAT, false, 0, 0);
 
     // gl.bindBuffer(gl.ARRAY_BUFFER, clrQuad);
     // gl.enableVertexAttribArray(aVertexColor);
-    // gl.vertexAttribPointer(aVertexColor, 4, gl.UNSIGNED_BYTE, true, 0, 0); //!
+    // gl.vertexAttribPointer(aVertexColor, 4, gl.UNSIGNED_BYTE, true, 0, 0); 
 
     gl.disableVertexAttribArray(aVertexColor);
-    gl.vertexAttrib4fv(aVertexColor, [1, 1, 0.5, 1]);
+    gl.vertexAttrib4fv(aVertexColor, [1, 1, 0.5, 1]); // FIXME HACK drawmesh only used for logo and has hardcoded yellow
+
+    gl.drawElements(gl.TRIANGLE_STRIP, mesh.indexCount, gl.UNSIGNED_SHORT, 0);
+
+}
+
+export function DrawTexturedMesh(gl: WebGLRenderingContext, transform: mat4, mesh: Mesh, material: Material<'aVertexPosition' | 'aVertexColor' | 'aTexCoord', 'uModel' | 'uTexture'>, tex: WebGLTexture, uvs: WebGLBuffer, uvsOffset: number) {
+    const { attrib: { aVertexPosition, aVertexColor, aTexCoord }, uniform: { uModel } } = material;
+
+    gl.uniformMatrix4fv(uModel, false, transform);
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, mesh.vertices);
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, mesh.indices);
+    gl.enableVertexAttribArray(aVertexPosition);
+    gl.vertexAttribPointer(aVertexPosition, 3, gl.FLOAT, false, 0, 0);
+    gl.enableVertexAttribArray(aVertexPosition);
+    gl.vertexAttribPointer(aVertexPosition, 3, gl.FLOAT, false, 0, 0);
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, uvs);
+    gl.enableVertexAttribArray(aTexCoord);
+    gl.vertexAttribPointer(aTexCoord, 2, gl.FLOAT, false, 0, uvsOffset);
+
+    // gl.bindBuffer(gl.ARRAY_BUFFER, clrQuad);
+    // gl.enableVertexAttribArray(aVertexColor);
+    // gl.vertexAttribPointer(aVertexColor, 4, gl.UNSIGNED_BYTE, true, 0, 0); 
+
+    gl.disableVertexAttribArray(aVertexColor);
+    gl.vertexAttrib4fv(aVertexColor, [1, 1, 1, 1]);
+
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.uniform1i(material.uniform.uTexture, 0);
 
     gl.drawElements(gl.TRIANGLE_STRIP, mesh.indexCount, gl.UNSIGNED_SHORT, 0);
 
@@ -162,11 +191,11 @@ function DrawTerrain(gl: WebGLRenderingContext, meshTerrain: Mesh, colorsTerrain
     gl.bindBuffer(gl.ARRAY_BUFFER, meshTerrain.vertices);
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, meshTerrain.indices);
     gl.enableVertexAttribArray(aVertexPosition);
-    gl.vertexAttribPointer(aVertexPosition, 3, gl.FLOAT, false, 0, 0); //!
+    gl.vertexAttribPointer(aVertexPosition, 3, gl.FLOAT, false, 0, 0);
 
     gl.bindBuffer(gl.ARRAY_BUFFER, colorsTerrain);
     gl.enableVertexAttribArray(aVertexColor);
-    gl.vertexAttribPointer(aVertexColor, 4, gl.UNSIGNED_BYTE, true, 0, 0); //!
+    gl.vertexAttribPointer(aVertexColor, 4, gl.UNSIGNED_BYTE, true, 0, 0);
 
     gl.drawElements(gl.TRIANGLES, meshTerrain.indexCount, gl.UNSIGNED_SHORT, 0);
 
@@ -278,9 +307,11 @@ function ScheduleFrameLoop(ctx: Context, world: World) {
             actor.state.OnDraw(ctx);
         }
 
+
+        gl.useProgram(ctx.materialUnlitTex.program);
         for (const piece of pieces) {
             //if (placed.has(piece.uid))
-            DrawMesh(gl, piece.transform, piece.mesh, materialDefault);
+            DrawTexturedMesh(gl, piece.transform, piece.mesh, ctx.materialUnlitTex, ctx.texCheese, ctx.uvsBasic, 0);
         }
 
         requestAnimationFrame(Frame);
