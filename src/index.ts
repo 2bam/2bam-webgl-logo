@@ -18,7 +18,7 @@ const LOGO = `
 
 const MTX_IDENTITY: ReadonlyMat4 = mat4.create();
 
-function CreatePiecesWithDependencies(logo: string, meshesPieces: { [ch: string]: Mesh; }) {
+function CreatePiecesWithDependencies(logo: string, meshesPieces: { [ch: string]: Mesh; }): Piece[] {
     console.log(logo);
     const lines = logo.split('\n');
     lines.reverse();
@@ -66,7 +66,8 @@ function CreatePiecesWithDependencies(logo: string, meshesPieces: { [ch: string]
             eulerVelocity: [0, 0, 0],
             transform: mat4.create(),
             needs,
-            mesh
+            mesh,
+            random: Math.floor(Math.random() * 4)
         };
     });
     return pieces;
@@ -280,6 +281,10 @@ function ScheduleFrameLoop(ctx: Context, world: World) {
 
         DrawTerrain(gl, meshTerrain, colorsTerrain, materialDefault);
 
+        // Don't do depth testing for terrain
+        gl.clear(gl.DEPTH_BUFFER_BIT);
+
+
 
         // Draw flying sprites
         // DrawSprite(gl, [1, 0, 0], [1, 0, 1, 1], 'actor');
@@ -306,9 +311,12 @@ function ScheduleFrameLoop(ctx: Context, world: World) {
             //gl.useProgram(texProgram);
 
             const xf = actor.state.GetTransform(ctx);
-            const off = Math.floor(((time * 4) % 1) * 4) * 32;
-            // const off = Math.floor(Math.random() * 4) * 32;
-            DrawTexturedMesh(gl, xf, ctx.meshQuad, ctx.materialUnlitTex, ctx.texRatAnim, ctx.uvsBasic, off);
+
+            //const off = Math.floor(((time * 4) % 1) * 4) * 32;
+            //const off = Math.floor(((time / 4) % 1) * 4) * 32;
+            const uvOffset = actor.state.GetFrame(time) * 32;
+
+            DrawTexturedMesh(gl, xf, ctx.meshQuad, ctx.materialUnlitTex, ctx.texRatAnim, ctx.uvsBasic, uvOffset);
 
         }
 
@@ -318,7 +326,7 @@ function ScheduleFrameLoop(ctx: Context, world: World) {
         gl.uniformMatrix4fv(ctx.materialUnlitTex.uniform.uView, false, mtxView);
         for (const piece of pieces) {
             //if (placed.has(piece.uid))
-            DrawTexturedMesh(gl, piece.transform, piece.mesh, ctx.materialUnlitTex, ctx.texCheese, ctx.uvsBasic, 0);
+            DrawTexturedMesh(gl, piece.transform, piece.mesh, ctx.materialUnlitTex, ctx.texCheese, ctx.uvsBasic, piece.random * 32);
             //DrawMesh(gl, piece.transform, piece.mesh, ctx.materialDefault);
         }
 
@@ -371,6 +379,8 @@ function ScheduleActorsThink(world: World) {
 
 async function WebGLSetup(gl: WebGLRenderingContext) {
     gl.clearColor(0, 0, 0, 0);
+    gl.enable(gl.DEPTH_TEST);
+    gl.depthFunc(gl.LESS);
 }
 
 function WorldSetup({ meshesPieces }: Context) {

@@ -6,8 +6,10 @@ This project was done in a week or so to replace my old webpage header and showc
 - Vanilla WebGL
 - Node and Webpack
 - A bit of algebra
-- Some Object oriented, Data oriented, Functional approaches.
 - Github Actions to build and deploy to its own Github Page
+- Some of this paradigm, some of that
+
+<img src='assets/rat.gif'>
 
 ## How to run
 

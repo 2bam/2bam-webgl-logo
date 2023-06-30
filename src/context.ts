@@ -10,6 +10,23 @@ import ImgCheese from '../assets/cheese.png';
 
 // Contains several GL related elements necessary for rendering.
 
+function CreateTileMapUVs(columns: number, rows: number, frames: number) {
+    const us: number[] = [];
+    const vs: number[] = [];
+    for (let i = 0; i < frames; i++) {
+        const u = i % columns;
+        const v = 1 - ((i - u) / columns);
+        us.push(u, u + 1, u, u + 1);
+        vs.push(v, v, v + 1, v + 1);
+    }
+    const uvs: number[] = [];
+    for (let i = 0; i < us.length; i++) {
+        uvs.push(us[i] / columns, vs[i] / rows);
+    }
+    console.log(uvs);
+    return uvs;
+}
+
 export async function CreateContext(canvas: HTMLCanvasElement) {
     const gl = canvas.getContext("webgl", { stencil: true, alpha: true });
     if (!gl) throw new Error("Error getting webgl context");
@@ -18,12 +35,7 @@ export async function CreateContext(canvas: HTMLCanvasElement) {
     const uvsBasic = gl.createBuffer();
     if (!uvsBasic) throw new Error('Error creating buffer');
     gl.bindBuffer(gl.ARRAY_BUFFER, uvsBasic);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
-        0, 0, .25, 0, 0, 1, .25, 1,
-        .25 + 0, 0, .25 + .25, 0, .25 + 0, 1, .25 + .25, 1,
-        .5 + 0, 0, .5 + .25, 0, .5 + 0, 1, .5 + .25, 1,
-        .75 + 0, 0, .75 + .25, 0, .75 + 0, 1, .75 + .25, 1,
-    ]), gl.STATIC_DRAW);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(CreateTileMapUVs(4, 2, 5)), gl.STATIC_DRAW);
 
     gl.disable(gl.CULL_FACE);
 

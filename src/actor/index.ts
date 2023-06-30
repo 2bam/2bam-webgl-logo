@@ -12,6 +12,7 @@ const SCARE_JUMP_HEIGHT = 0.5;
 
 export class Actor {
     position: vec3;
+    facingX: number;
     state: ActorState;
 
     wiggle = 0;
@@ -52,7 +53,8 @@ export class Actor {
         deltaY[2] = 0;
 
         const move = vec3.create();
-        const dir = vec3.create();
+
+        const direction = vec3.create();
         if (vec3.sqrLen(delta) < ACTOR_REACH_THRESHOLD * ACTOR_REACH_THRESHOLD) {
             return 'reached';
         }
@@ -69,8 +71,12 @@ export class Actor {
             // TODO: lerp heightmap to follow ground
             vec3.copy(move, deltaXZ);
         }
-        vec3.normalize(dir, move);
-        vec3.scaleAndAdd(this.position, this.position, dir, Math.min(SPEED * deltaTime, vec3.len(move)));
+        vec3.normalize(direction, move);
+        vec3.scaleAndAdd(this.position, this.position, direction, Math.min(SPEED * deltaTime, vec3.len(move)));
+
+        if (direction[0] < 0) this.facingX = -1;
+        else if (direction[0] > 0) this.facingX = 1;
+
         return 'moving';
     }
 }
@@ -90,6 +96,10 @@ abstract class ActorState {
     abstract OnUpdate(time: number, deltaTime: number): void;
     OnExit(): void { }
 
+    GetFrame(time: number): number {
+        return Math.floor(((time * 4) % 1) * 4);
+    }
+
     GetTransform(ctx: Context): ReadonlyMat4 {
         const wiggleAngleRad = this._actor.wiggle * 10 * DEG_TO_RAD;
         const t = (1 - Math.abs(this._actor.wiggle));
@@ -104,7 +114,9 @@ abstract class ActorState {
         mat4.rotateZ(xf, xf, wiggleAngleRad);
         mat4.scale(xf, xf, [1 - h / 2, 1 + h, 1]); // Stretch
         //mat4.scale(xf, xf, [0.1, 0.1, 0.1]);
-        mat4.scale(xf, xf, [0.25, 0.25, 0.25]);
+        //mat4.scale(xf, xf, [0.25, 0.25, 0.25]); //!!!
+        mat4.scale(xf, xf, [0.33, 0.33, 0.33]);
+        if (this._actor.facingX < 0 || this._actor.wiggle < 0) mat4.scale(xf, xf, [-1, 1, 1]);
 
         return xf;
 
@@ -117,7 +129,7 @@ abstract class ActorState {
     //
 
     // Returns true if the collect assignment was accepted
-    Collect(piece: Piece) { return false; }
+    Collect(_piece: Piece) { return false; }
     Dance() { }
     CanDance() { return false; }
     Scare() {
@@ -169,7 +181,9 @@ class DanceState extends ActorState {
         return true;
     }
 
-    CanDance() { return true; }
+    override CanDance() { return true; }
+
+    override GetFrame(_time: number) { return 4; }
 }
 
 

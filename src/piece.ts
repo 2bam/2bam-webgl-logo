@@ -11,6 +11,7 @@ export interface Piece {
     transform: mat4;
 
     mesh: Mesh;
+    random: number;
 
     targetPosition: vec3;
     needs: number[];

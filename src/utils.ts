@@ -106,8 +106,6 @@ export async function LoadTexture(gl: WebGLRenderingContext, src: string): Promi
             gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
             //gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGB5_A1, gl.UNSIGNED_SHORT_5_5_5_1, image); FIXME: use this
 
-            // gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-            // gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
 
@@ -116,7 +114,7 @@ export async function LoadTexture(gl: WebGLRenderingContext, src: string): Promi
             // // Prevents t-coordinate wrapping (repeating).
             // gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 
-            //gl.generateMipmap(gl.TEXTURE_2D);
+            //     gl.generateMipmap(gl.TEXTURE_2D);
 
             resolve(tex);
         };
