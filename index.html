@@ -30,8 +30,8 @@
         }
 
         #tap-message {
-            display: table;
-            font-size: 24pt;
+            text-align: center;
+            font-style: italic;
         }
 
         #legend {
@@ -42,12 +42,11 @@
             color: hotpink
         }
     </style>
+
 </head>
 
 <body>
     <canvas id="canvas" class="centered" width="800" height="400"></canvas>
-
-    <!-- <div id="tap-message" class="centered">👆 Tap me!</div> -->
 
     <div id="legend" class="centered">
         <p>This project was done in a week or so to replace my old webpage header and showcase some skills </p>
@@ -65,7 +64,7 @@
             <a href="https://github.com/2bam/2bam-webgl-logo">https://github.com/2bam/2bam-webgl-logo</a>
         </p>
 
-        <p>(You can tap the logo to explode it again)</p>
+        <p id="tap-message">(You can tap the logo to explode it again)</p>
     </div>
 
     <img src='assets/rat.gif' class="centered">
