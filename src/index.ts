@@ -282,9 +282,11 @@ function ScheduleFrameLoop(ctx: Context, world: World) {
         mat4.getTranslation(lookAtViewTranslation, mtxView);
         mat4.translate(ctx.mtxSpriteFaceCamera, mtxInvView, lookAtViewTranslation);
 
+        gl.disable(gl.DEPTH_TEST);
         DrawTerrain(gl, meshTerrain, colorsTerrain, materialDefault);
 
         // Don't do depth testing for terrain
+        gl.enable(gl.DEPTH_TEST);
         gl.clear(gl.DEPTH_BUFFER_BIT);
 
 
@@ -417,7 +419,7 @@ async function Main(canvas: HTMLCanvasElement) {
         Scatter(world);
     }
     canvas.addEventListener('click', onTap);
-    canvas.addEventListener('touchstart', onTap);
+    //canvas.addEventListener('touchstart', onTap);
 
     canvas.addEventListener("webglcontextlost", () => {
         // Easy peasy
