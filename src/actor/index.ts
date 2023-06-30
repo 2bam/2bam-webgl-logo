@@ -2,10 +2,12 @@ import { ReadonlyVec3, mat4, vec3 } from "gl-matrix";
 import { Piece } from "../piece";
 import { World } from "../world";
 import { DrawActorQuadTEMP, DrawQuad, mtxSprite } from "..";
-import { DEG_TO_RAD } from "../utils";
+import { DEG_TO_RAD, RandomFrontLocation } from "../utils";
+import { Context } from "../context";
 
 const ACTOR_REACH_THRESHOLD = 0.01;
 const SPEED = 9;
+
 
 export class Actor {
     position: vec3;
@@ -87,7 +89,7 @@ abstract class ActorState {
     abstract OnUpdate(time: number, deltaTime: number): void;
     OnExit(): void { }
 
-    OnDraw(gl: WebGLRenderingContext): void {
+    OnDraw(ctx: Context): void {
         const wiggleAngleRad = this._actor.wiggle * 10 * DEG_TO_RAD;
         const t = (1 - Math.abs(this._actor.wiggle));
         const h = t * 0.25;
@@ -103,7 +105,7 @@ abstract class ActorState {
         mat4.scale(xf, xf, [0.1, 0.1, 0.1]);
 
         //FIXME: Coupled to DrawQuad in index.ts
-        DrawActorQuadTEMP(gl, xf, [0, 1, 0, 1]);
+        DrawActorQuadTEMP(ctx, xf, [0, 1, 0, 1]);
     }
 
     //
@@ -221,9 +223,7 @@ class ClimbDownState extends ActorState {
 
     constructor(actor: Actor) {
         super(actor);
-        const d = 1 + Math.random() * 2;
-        const a = (20 + 140 * Math.random()) * DEG_TO_RAD; // Only on front
-        this._target = [Math.cos(a) * d, 0, Math.sin(a) * d];
+        this._target = RandomFrontLocation();
     }
 
     override Collect(piece: Piece) {

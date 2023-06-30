@@ -1,7 +1,13 @@
 import { vec3 } from "gl-matrix";
 import { Piece, UpdatePieceTransform } from "./piece";
+import { Actor } from "./actor";
 
 export class World {
+
+    actors: Actor[];
+    pieces: Piece[];
+
+
     placed = new Map<number, Piece>();
     assigned = new Set<number>();
 

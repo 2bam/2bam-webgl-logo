@@ -1,66 +1,15 @@
-import { vec3, mat4, ReadonlyVec3, ReadonlyVec4, ReadonlyMat4 } from 'gl-matrix';
-import { DEG_TO_RAD, LoadMaterial, LoadProgram, Material } from './utils';
+import { vec3, mat4, ReadonlyVec4, ReadonlyMat4 } from 'gl-matrix';
+import { DEG_TO_RAD, LoadTexture, Material, RandomFrontLocation } from './utils';
 import { CreateMeshesForPieces, Piece, UpdatePieceTransform } from './piece';
 import { Actor } from './actor';
 import { World } from './world';
 import { DrawStencil, GetStencilBuffer } from './stencil';
-import { CreateMesh, Mesh } from './mesh';
-import { SHADER_VERTEX_DEFAULT, SHADER_FRAGMENT_DEFAULT, SHADER_VERTEX_TEXTURE, SHADER_FRAGMENT_TEXTURE, SHADER_VERTEX_STENCIL, SHADER_FRAGMENT_STENCIL } from './shaders';
-import { CreateTerrain } from './terrain';
+import { Mesh } from './mesh';
+import { Context, CreateContext } from './context';
 import ImgRat from '../assets/rat.png';
+import ImgCheese from '../assets/cheese.png';
 
-const MTX_IDENTITY: ReadonlyMat4 = mat4.create();
-
-const canvas = document.getElementById("canvas") as HTMLCanvasElement;
-const gl = canvas.getContext("webgl", { stencil: true, alpha: true });
-
-let texRat: WebGLTexture;
-
-const materialDefault = LoadMaterial(
-    gl,
-    SHADER_VERTEX_DEFAULT,
-    SHADER_FRAGMENT_DEFAULT,
-    ["aVertexPosition", "aVertexColor", "aTexCoord"],
-    ["uProjection", "uView", "uModel"]
-);
-
-const materialStencil = LoadMaterial(
-    gl,
-    SHADER_VERTEX_STENCIL,
-    SHADER_FRAGMENT_STENCIL,
-    ["aVertexPosition"],
-    []
-);
-
-// const defaultProgram = LoadProgram(gl, SHADER_VERTEX_DEFAULT, SHADER_FRAGMENT_DEFAULT);
-// const aVertexPosition = gl.getAttribLocation(defaultProgram, 'aVertexPosition');
-// const aVertexColor = gl.getAttribLocation(defaultProgram, 'aVertexColor');
-// const uProjection = gl.getUniformLocation(defaultProgram, 'uProjection');
-// const uView = gl.getUniformLocation(defaultProgram, 'uView');
-// const uModel = gl.getUniformLocation(defaultProgram, 'uModel');
-//
-// const matRat = LoadMaterial(gl, SHADER_VERTEX_TEXTURE, SHADER_FRAGMENT_TEXTURE, ["aVertexPosition", "aVertexColor", "aTexCoord"], ["uProjection", "uView", "uModel", "uTexture"]);
-
-
-const meshQuad = CreateMesh(
-    gl,
-    [
-        [-1, -1, 0],
-        [1, -1, 0],
-        [-1, 1, 0],
-        [1, 1, 0],
-    ],
-    [0, 1, 2, 3]
-);
-
-const meshesPieces = CreateMeshesForPieces(gl);
-
-
-const { meshTerrain, colorsTerrain } = CreateTerrain(gl);
-
-
-
-const logo = `
+const LOGO = `
   /--
   V  )  +---     ^    &  /|           
      )  |   )  /  &   )&/ )          
@@ -69,23 +18,23 @@ const logo = `
  -----  +---   -   -  -   -
 `;
 
+const MTX_IDENTITY: ReadonlyMat4 = mat4.create();
 
 
-function MakePieces() {
+function MakePieces(logo: string, meshesPieces: { [ch: string]: Mesh; }) {
     console.log(logo);
     const lines = logo.split('\n');
     lines.reverse();
 
-    let uid = 1;
-
+    let nextPieceUid = 1;
     const linesp = lines.map(l => [...l].map((ch, gx) => ({ ch, gx })).filter(e => e.ch !== ' ')).filter(l => l.length > 0);
 
-    const roots = linesp[0].map(({ ch, gx }) => ({ gx, gy: 0, ch, needs: [], uid: uid++ }));
+    const roots = linesp[0].map(({ ch, gx }) => ({ gx, gy: 0, ch, needs: [], uid: nextPieceUid++ }));
     let prevLevel = roots;
     const levels = [roots];
     for (let gy = 1; gy < linesp.length; gy++) {
         const currLevel = linesp[gy].map(({ ch, gx }) => {
-            return { gx, gy, ch, needs: [], uid: uid++ };
+            return { gx, gy, ch, needs: [], uid: nextPieceUid++ };
         });
         levels.push(currLevel);
         prevLevel = currLevel;
@@ -93,6 +42,8 @@ function MakePieces() {
 
     const all = levels.flat();
 
+    // Here we connect dependencies so they grow the sign one piece after another instead of randomly
+    // (which sometimes would make pieces look like they're flying)
     const withNeeds = all.map(e => {
         //const needs = prevLevel.filter(e => Math.abs(e.gx - gx) <= 1).map(e => e.uid);
         const needs = e.gy === 0 ? [] : all.filter(other => Math.abs(other.gx - e.gx) <= 1 && Math.abs(other.gy - e.gy) <= 1).map(e => e.uid);
@@ -117,30 +68,15 @@ function MakePieces() {
     });
     return pieces;
 }
-const pieces = MakePieces();
-const world = new World();
-for (const piece of pieces) world.PlacePiece(piece);
 
-const actors: Actor[] = [
-    new Actor(world, [1, 0, 0]),
-    new Actor(world, [0, 0, 1]),
-    new Actor(world, [-1, 0, 0]),
-    new Actor(world, [0, 0, -1]),
-    new Actor(world, [1, 0, 1]),
-    new Actor(world, [1, 0, 0]),
-    new Actor(world, [0, 0, 1]),
-    new Actor(world, [-1, 0, 0]),
-    new Actor(world, [0, 0, -1]),
-    new Actor(world, [1, 0, 1]),
-];
-
-function Scatter(ps: Piece[]) {
-    for (const a of actors) {
+function Scatter(world: World) {
+    for (const a of world.actors) {
         a.state.Stop();
     }
 
-    for (const p of ps) {
+    for (const p of world.placed.values()) {
         world.placed.delete(p.uid);
+
         p.velocity[0] = (Math.random() - 0.5) * 5;
         p.velocity[1] = 5 + Math.random() * 0.5;
         p.velocity[2] = (Math.random() - 0.5) * 5;
@@ -170,11 +106,11 @@ export const mtxSprite = mat4.create();//FIXME: awkward
 //     DrawQuad(gl, mtxModel, color);
 // }
 
-export function DrawActorQuadTEMP(gl: WebGLRenderingContext, transform: mat4, color: ReadonlyVec4) {
-    DrawQuad(gl, transform, color, materialDefault);
+export function DrawActorQuadTEMP(ctx: Context, transform: mat4, color: ReadonlyVec4) {
+    DrawQuad(ctx, transform, color, ctx.materialDefault);
 }
 
-export function DrawQuad(gl: WebGLRenderingContext, transform: mat4, color: ReadonlyVec4, material: Material<'aVertexPosition' | 'aVertexColor', 'uModel'>) {
+export function DrawQuad({ gl, meshQuad }: Context, transform: mat4, color: ReadonlyVec4, material: Material<'aVertexPosition' | 'aVertexColor', 'uModel'>) {
     const { attrib: { aVertexPosition, aVertexColor }, uniform: { uModel } } = material;
 
     gl.uniformMatrix4fv(uModel, false, transform);
@@ -240,11 +176,11 @@ function DrawTerrain(gl: WebGLRenderingContext, meshTerrain: Mesh, colorsTerrain
     gl.drawElements(gl.LINES, meshTerrain.indexCount, gl.UNSIGNED_SHORT, 0);
 }
 
-function ApplyStencil() {
+function ApplyStencil({ gl, canvas, materialStencil }: Context) {
     const { program, attrib: { aVertexPosition } } = materialStencil;
     gl.viewport(0, 0, canvas.width, canvas.height);
 
-    //FIXME: do a shader specially for the stencil, move to stencil.ts
+    //FIXME: move to stencil.ts
     gl.clear(gl.STENCIL_BUFFER_BIT);
     gl.useProgram(program);
     gl.enableVertexAttribArray(aVertexPosition);
@@ -255,100 +191,106 @@ function ApplyStencil() {
 }
 
 
-let lastTime: number;
-function frame(timeMillis: number) {
+function ScheduleFrameLoop(ctx: Context, world: World) {
+    let lastTime: number = performance.now() / 1000.0;
 
-    const time = timeMillis / 1000.0;
-    const deltaTime = (time - lastTime);
-    lastTime = time;
-    for (const piece of pieces) {
-        if (world.placed.has(piece.uid)) {
-            continue;
+    function Frame(timeMillis: number) {
+        const { pieces, placed, actors } = world;
+        const { gl, canvas, materialDefault, meshTerrain, colorsTerrain } = ctx;
+
+        const time = timeMillis / 1000.0;
+        const deltaTime = (time - lastTime);
+        lastTime = time;
+        for (const piece of pieces) {
+            if (placed.has(piece.uid)) {
+                continue;
+            }
+
+            vec3.scaleAndAdd(piece.velocity, piece.velocity, [0, -9.8, 0], deltaTime);
+            vec3.scaleAndAdd(piece.position, piece.position, piece.velocity, deltaTime);
+
+            vec3.scaleAndAdd(piece.eulerAngles, piece.eulerAngles, piece.eulerVelocity, deltaTime);
+
+            if (piece.position[1] <= 0) {
+                vec3.zero(piece.velocity);
+
+                piece.position[1] = 0;
+
+                vec3.zero(piece.eulerVelocity);
+            }
+
+            UpdatePieceTransform(piece);
         }
 
-        vec3.scaleAndAdd(piece.velocity, piece.velocity, [0, -9.8, 0], deltaTime);
-        vec3.scaleAndAdd(piece.position, piece.position, piece.velocity, deltaTime);
+        gl.viewport(0, 0, canvas.width, canvas.height);
 
-        vec3.scaleAndAdd(piece.eulerAngles, piece.eulerAngles, piece.eulerVelocity, deltaTime);
+        //FIXME: Why do we have to do it each frame?  If we never clear the Stencil Buffer? Maybe because of the viewport, but otherwise (if not changed) why?
+        ApplyStencil(ctx);
 
-        if (piece.position[1] <= 0) {
-            vec3.zero(piece.velocity);
-            piece.position[1] = 0;
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-            vec3.zero(piece.eulerVelocity);
-            //vec3.zero(piece.eulerAngles);
+        gl.useProgram(materialDefault.program);
+
+
+        const mtxProjection = mat4.create();
+        const mtxView = mat4.create();
+        const mtxModel = mat4.create();
+        mat4.perspective(mtxProjection, 90 * DEG_TO_RAD, canvas.width / canvas.height, 0.1, 100);
+
+        mat4.identity(mtxView);
+        const t = time * 0.001;
+        const m = 0.1;
+        mat4.lookAt(mtxView, [Math.cos(t) * m, Math.sin(t) * m + 1, 3], [0, 0, 0], [0, 1, 0]);
+
+        gl.uniformMatrix4fv(materialDefault.uniform.uProjection, false, mtxProjection);
+        gl.uniformMatrix4fv(materialDefault.uniform.uView, false, mtxView);
+
+        mat4.invert(mtxInvView, mtxView);
+        const lookAtViewTranslation = vec3.create();
+        mat4.getTranslation(lookAtViewTranslation, mtxView);
+        mat4.translate(mtxSprite, mtxInvView, lookAtViewTranslation);
+
+        DrawTerrain(gl, meshTerrain, colorsTerrain, materialDefault);
+
+
+        // Draw flying sprites
+        // DrawSprite(gl, [1, 0, 0], [1, 0, 1, 1], 'actor');
+        // DrawSprite(gl, [1, 1, 0], [1, .5, 1, 1], 'actor');
+        // DrawSprite(gl, [1, 0, 1], [1, 0, .5, 1], 'actor');
+        // DrawSprite(gl, [1, 1, 1], [.5, 0, 1, 1], 'actor');
+        // DrawSprite(gl, [-1, 1, 1], [.5, 0, 1, 1], 'actor');
+        ////drawSprite(gl, [-1, 1, 2], [.5, 1, 1, 1], 'actor');
+
+
+        // for (const piece of pieces) {
+        //     piecesQuads.add(piece.position
+
+        // }
+
+        for (const actor of actors) {
+            actor.state.OnUpdate(time, deltaTime);
+            //console.log(actor.state.constructor.name);
+
+            //l.bindTexture(gl.TEXTURE_2D, texRat);
+            //gl.useProgram(texProgram);
+
+            actor.state.OnDraw(ctx);
         }
 
-        UpdatePieceTransform(piece);
+        for (const piece of pieces) {
+            //if (placed.has(piece.uid))
+            DrawMesh(gl, piece.transform, piece.mesh, materialDefault);
+        }
 
-
+        requestAnimationFrame(Frame);
     }
-
-    gl.viewport(0, 0, canvas.width, canvas.height);
-
-    //FIXME: Why do we have to do it each frame?  If we never clear the Stencil Buffer? Maybe because of the viewport, but otherwise (if not changed) why?
-    ApplyStencil();
-
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-
-    gl.useProgram(materialDefault.program);
-
-
-    const mtxProjection = mat4.create();
-    const mtxView = mat4.create();
-    const mtxModel = mat4.create();
-    mat4.perspective(mtxProjection, 90 * DEG_TO_RAD, canvas.width / canvas.height, 0.1, 100);
-
-    mat4.identity(mtxView);
-    const t = time * 0.001;
-    const m = 0.1;
-    mat4.lookAt(mtxView, [Math.cos(t) * m, Math.sin(t) * m + 1, 3], [0, 0, 0], [0, 1, 0]);
-
-    gl.uniformMatrix4fv(materialDefault.uniform.uProjection, false, mtxProjection);
-    gl.uniformMatrix4fv(materialDefault.uniform.uView, false, mtxView);
-
-    mat4.invert(mtxInvView, mtxView);
-    const lookAtViewTranslation = vec3.create();
-    mat4.getTranslation(lookAtViewTranslation, mtxView);
-    mat4.translate(mtxSprite, mtxInvView, lookAtViewTranslation);
-
-    DrawTerrain(gl, meshTerrain, colorsTerrain, materialDefault);
-
-
-    // Draw flying sprites
-    // DrawSprite(gl, [1, 0, 0], [1, 0, 1, 1], 'actor');
-    // DrawSprite(gl, [1, 1, 0], [1, .5, 1, 1], 'actor');
-    // DrawSprite(gl, [1, 0, 1], [1, 0, .5, 1], 'actor');
-    // DrawSprite(gl, [1, 1, 1], [.5, 0, 1, 1], 'actor');
-    // DrawSprite(gl, [-1, 1, 1], [.5, 0, 1, 1], 'actor');
-    ////drawSprite(gl, [-1, 1, 2], [.5, 1, 1, 1], 'actor');
-
-
-    // for (const piece of pieces) {
-    //     piecesQuads.add(piece.position
-
-    // }
-
-    for (const actor of actors) {
-        actor.state.OnUpdate(time, deltaTime);
-        //console.log(actor.state.constructor.name);
-
-        //l.bindTexture(gl.TEXTURE_2D, texRat);
-        //gl.useProgram(texProgram);
-
-        actor.state.OnDraw(gl);
-    }
-
-    for (const piece of pieces) {
-        //if (placed.has(piece.uid))
-        DrawMesh(gl, piece.transform, piece.mesh, materialDefault);
-    }
-
-    requestAnimationFrame(frame);
+    requestAnimationFrame(Frame);
 }
 
 // High level coordination for the actors
-function scheduleActorsThink() {
+function ScheduleActorsThink(world: World) {
+    const { pieces, actors } = world;
+
     const notPlaced = pieces.filter(p => !world.placed.has(p.uid));
     if (notPlaced.length === 0 && actors.every(actor => actor.state.CanDance())) {
         for (const actor of actors) {
@@ -384,55 +326,47 @@ function scheduleActorsThink() {
         }
     }
 
-    setTimeout(scheduleActorsThink, 100);
+    setTimeout(() => ScheduleActorsThink(world), 100);
 }
-
-
-async function LoadImage(src: string): Promise<HTMLImageElement> {
-    return new Promise((resolve, reject) => {
-        const image = new Image();
-        image.onload = () => resolve(image);
-        image.onerror = (err) => reject(err);
-        image.src = src;
-    });
-}
-
-
 
 async function WebGLSetup(gl: WebGLRenderingContext) {
-    const imgRat = await LoadImage(ImgRat);
-    texRat = gl.createTexture();
 
-    gl.bindTexture(gl.TEXTURE_2D, texRat);
-    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGB5_A1, gl.UNSIGNED_SHORT_5_5_5_1, imgRat);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-
+    const texRat = await LoadTexture(gl, ImgRat);
     gl.clearColor(0, 0, 0, 0);
 }
 
+function WorldSetup({ meshesPieces }: Context) {
+    const world = new World();
+    const pieces = MakePieces(LOGO, meshesPieces);
+    for (const piece of pieces) world.PlacePiece(piece);
 
+    const actors: Actor[] = [];
+    for (let i = 0; i < 10; i++) { actors.push(new Actor(world, RandomFrontLocation())); }
+
+    world.pieces = pieces;
+    world.actors = actors;
+
+    return world;
+}
 
 async function Main(canvas: HTMLCanvasElement) {
-    const gl = canvas.getContext("webgl");
-    await WebGLSetup(gl);
+    const ctx = await CreateContext(canvas);
+    await WebGLSetup(ctx.gl);
+    const world = WorldSetup(ctx);
 
-    ApplyStencil();
+    //ApplyStencil(gl);
 
-    lastTime = performance.now() / 1000.0;
-    requestAnimationFrame(frame);
-    scheduleActorsThink();
+    ScheduleFrameLoop(ctx, world);
+    ScheduleActorsThink(world);
 
     // One shot initial scatter after a second
-    setTimeout(() => Scatter(pieces), 1000);
+    setTimeout(() => Scatter(world), 1000);
 
-    function tap(ev: Event) {
-        Scatter([...world.placed.values()]);
+    function onTap() {
+        Scatter(world);
     }
-
-    canvas.addEventListener('click', tap);
-    canvas.addEventListener('touchstart', tap);
+    canvas.addEventListener('click', onTap);
+    canvas.addEventListener('touchstart', onTap);
 
     canvas.addEventListener("webglcontextlost", () => {
         // Easy peasy
@@ -440,4 +374,5 @@ async function Main(canvas: HTMLCanvasElement) {
     });
 }
 
-Main(canvas).then();
+const _canvas = document.getElementById("canvas") as HTMLCanvasElement;
+Main(_canvas).then();

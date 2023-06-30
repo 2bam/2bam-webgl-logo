@@ -26,7 +26,7 @@ export function UpdatePieceTransform(piece: Piece) {
     mat4.scale(xf, xf, [0.1, 0.1, 0.1]);
 }
 
-function CreatePiece(gl: WebGLRenderingContext, vs: vec3[], ics: number[]) {
+function CreatePieceMesh(gl: WebGLRenderingContext, vs: vec3[], ics: number[]) {
     const extruded = ExtrudeTriangleStripWithoutCentralVertices(vs, ics, 0.7);
     return CreateMesh(
         gl,
@@ -37,7 +37,7 @@ function CreatePiece(gl: WebGLRenderingContext, vs: vec3[], ics: number[]) {
 
 export function CreateMeshesForPieces(gl: WebGLRenderingContext): { [ch: string]: Mesh; } {
     const piecesMeshes = {
-        'default': CreatePiece(
+        'default': CreatePieceMesh(
             gl,
             [
                 [-1, -1, 0],
@@ -47,7 +47,7 @@ export function CreateMeshesForPieces(gl: WebGLRenderingContext): { [ch: string]
             ],
             [0, 1, 2, 3]
         ),
-        '&': CreatePiece(
+        '&': CreatePieceMesh(
             gl,
             [
                 [2 + -1, -1, 0],
@@ -57,7 +57,7 @@ export function CreateMeshesForPieces(gl: WebGLRenderingContext): { [ch: string]
             ],
             [0, 1, 2, 3]
         ),
-        '/': CreatePiece(
+        '/': CreatePieceMesh(
             gl,
             [
                 [- 1, -1, 0],
@@ -67,7 +67,7 @@ export function CreateMeshesForPieces(gl: WebGLRenderingContext): { [ch: string]
             ],
             [0, 1, 2, 3]
         ),
-        ')': CreatePiece(
+        ')': CreatePieceMesh(
             gl,
             [
                 [- 1, -2 + -1, 0],
@@ -77,7 +77,7 @@ export function CreateMeshesForPieces(gl: WebGLRenderingContext): { [ch: string]
             ],
             [0, 1, 2, 3]
         ),
-        'V': CreatePiece(
+        'V': CreatePieceMesh(
             gl,
             [
                 [- 1, 1, 0],
@@ -86,7 +86,7 @@ export function CreateMeshesForPieces(gl: WebGLRenderingContext): { [ch: string]
             ],
             [0, 1, 2]
         ),
-        '^': CreatePiece(
+        '^': CreatePieceMesh(
             gl,
             [
                 [-2 - 1, -1, 0],

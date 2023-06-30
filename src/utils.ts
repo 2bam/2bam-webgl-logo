@@ -82,3 +82,27 @@ export function ExtrudeTriangleStripWithoutCentralVertices(vertices: vec3[], ind
 export function FlatVec3(vs: vec3[]): number[] {
     return vs.flatMap(v => [...v]);
 }
+
+export function RandomFrontLocation(): vec3 {
+    const d = 1 + Math.random() * 2;
+    const a = (20 + 140 * Math.random()) * DEG_TO_RAD; // Only on front
+    return [Math.cos(a) * d, 0, Math.sin(a) * d];
+}
+
+export async function LoadTexture(gl: WebGLRenderingContext, src: string): Promise<WebGLTexture> {
+    return new Promise((resolve, reject) => {
+        const image = new Image();
+        image.onload = () => {
+            const tex = gl.createTexture();
+            gl.bindTexture(gl.TEXTURE_2D, tex);
+            gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGB5_A1, gl.UNSIGNED_SHORT_5_5_5_1, image);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+
+            resolve(tex);
+        };
+        image.onerror = (err) => reject(err);
+        image.src = src;
+    });
+}
