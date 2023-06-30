@@ -137,9 +137,9 @@ export function DrawMesh(gl: WebGLRenderingContext, transform: mat4, mesh: Mesh,
     gl.uniformMatrix4fv(uModel, false, transform);
 
     gl.bindBuffer(gl.ARRAY_BUFFER, mesh.vertices);
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, mesh.indices);
     gl.enableVertexAttribArray(aVertexPosition);
     gl.vertexAttribPointer(aVertexPosition, 3, gl.FLOAT, false, 0, 0);
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, mesh.indices);
 
     // gl.bindBuffer(gl.ARRAY_BUFFER, clrQuad);
     // gl.enableVertexAttribArray(aVertexColor);
@@ -152,25 +152,23 @@ export function DrawMesh(gl: WebGLRenderingContext, transform: mat4, mesh: Mesh,
 
 }
 
-export function DrawTexturedMesh(gl: WebGLRenderingContext, transform: mat4, mesh: Mesh, material: Material<'aVertexPosition' | 'aVertexColor' | 'aTexCoord', 'uModel' | 'uTexture'>, tex: WebGLTexture, uvs: WebGLBuffer, uvsOffset: number) {
+export function DrawTexturedMesh(gl: WebGLRenderingContext, transform: ReadonlyMat4, mesh: Mesh, material: Material<'aVertexPosition' | 'aVertexColor' | 'aTexCoord', 'uModel' | 'uTexture'>, tex: WebGLTexture, uvs: WebGLBuffer, uvsOffset: number) {
     const { attrib: { aVertexPosition, aVertexColor, aTexCoord }, uniform: { uModel } } = material;
 
     gl.uniformMatrix4fv(uModel, false, transform);
 
-    gl.bindBuffer(gl.ARRAY_BUFFER, mesh.vertices);
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, mesh.indices);
-    gl.enableVertexAttribArray(aVertexPosition);
-    gl.vertexAttribPointer(aVertexPosition, 3, gl.FLOAT, false, 0, 0);
-    gl.enableVertexAttribArray(aVertexPosition);
-    gl.vertexAttribPointer(aVertexPosition, 3, gl.FLOAT, false, 0, 0);
-
     gl.bindBuffer(gl.ARRAY_BUFFER, uvs);
     gl.enableVertexAttribArray(aTexCoord);
     gl.vertexAttribPointer(aTexCoord, 2, gl.FLOAT, false, 0, uvsOffset);
+    // gl.bindBuffer(gl.ARRAY_BUFFER, mesh.vertices);
+    // gl.enableVertexAttribArray(aTexCoord);
+    // gl.vertexAttribPointer(aTexCoord, 2, gl.FLOAT, false, 3 * 4, uvsOffset);
 
-    // gl.bindBuffer(gl.ARRAY_BUFFER, clrQuad);
-    // gl.enableVertexAttribArray(aVertexColor);
-    // gl.vertexAttribPointer(aVertexColor, 4, gl.UNSIGNED_BYTE, true, 0, 0); 
+    gl.bindBuffer(gl.ARRAY_BUFFER, mesh.vertices);
+    gl.enableVertexAttribArray(aVertexPosition);
+    gl.vertexAttribPointer(aVertexPosition, 3, gl.FLOAT, false, 0, 0);
+
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, mesh.indices);
 
     gl.disableVertexAttribArray(aVertexColor);
     gl.vertexAttrib4fv(aVertexColor, [1, 1, 1, 1]);
@@ -297,6 +295,9 @@ function ScheduleFrameLoop(ctx: Context, world: World) {
 
         // }
 
+        gl.useProgram(ctx.materialUnlitTex.program);
+        gl.uniformMatrix4fv(ctx.materialUnlitTex.uniform.uProjection, false, mtxProjection);
+        gl.uniformMatrix4fv(ctx.materialUnlitTex.uniform.uView, false, mtxView);
         for (const actor of actors) {
             actor.state.OnUpdate(time, deltaTime);
             //console.log(actor.state.constructor.name);
@@ -304,14 +305,21 @@ function ScheduleFrameLoop(ctx: Context, world: World) {
             //l.bindTexture(gl.TEXTURE_2D, texRat);
             //gl.useProgram(texProgram);
 
-            actor.state.OnDraw(ctx);
+            const xf = actor.state.GetTransform(ctx);
+            const off = Math.floor(((time * 4) % 1) * 4) * 32;
+            // const off = Math.floor(Math.random() * 4) * 32;
+            DrawTexturedMesh(gl, xf, ctx.meshQuad, ctx.materialUnlitTex, ctx.texRatAnim, ctx.uvsBasic, off);
+
         }
 
 
         gl.useProgram(ctx.materialUnlitTex.program);
+        gl.uniformMatrix4fv(ctx.materialUnlitTex.uniform.uProjection, false, mtxProjection);
+        gl.uniformMatrix4fv(ctx.materialUnlitTex.uniform.uView, false, mtxView);
         for (const piece of pieces) {
             //if (placed.has(piece.uid))
             DrawTexturedMesh(gl, piece.transform, piece.mesh, ctx.materialUnlitTex, ctx.texCheese, ctx.uvsBasic, 0);
+            //DrawMesh(gl, piece.transform, piece.mesh, ctx.materialDefault);
         }
 
         requestAnimationFrame(Frame);

@@ -50,10 +50,15 @@ export function LoadMaterial<TA extends string, TU extends string>(gl: WebGLRend
         gl.deleteProgram(program);
     }
 
+    attribNames.forEach(n => { if (gl.getAttribLocation(program, n) < 0) console.error("Bad aname " + n); });
+    uniformNames.forEach(n => { if (gl.getUniformLocation(program, n) as number < 0) console.error("Bad uname " + n); });
+
     // Note: Casting to assert we're sure it's the full Record as we're mapping the names.
     //       Object.fromEntries doesn't keep the key types on the returned object.
     const attrib = Object.fromEntries(attribNames.map(name => [name, gl.getAttribLocation(program, name)])) as Record<TA, number>;
     const uniform = Object.fromEntries(uniformNames.map(name => [name, gl.getUniformLocation(program, name)])) as Record<TU, WebGLUniformLocation>;
+
+
 
     return {
         program,
@@ -66,6 +71,8 @@ export function LoadMaterial<TA extends string, TU extends string>(gl: WebGLRend
 
 // We assume no internal vertices as we deal with simple shapes. We'll also asume triangle strip mode.
 export function ExtrudeTriangleStripWithoutCentralVertices(vertices: vec3[], indices: number[], zDepth: number) {
+    //return { vertices, indices };
+
     const zOffset = vec3.fromValues(0, 0, zDepth);
     const iOffset = vertices.length;
 
@@ -96,10 +103,20 @@ export async function LoadTexture(gl: WebGLRenderingContext, src: string): Promi
             const tex = gl.createTexture();
             gl.bindTexture(gl.TEXTURE_2D, tex);
             gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
-            //gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGB5_A1, gl.UNSIGNED_SHORT_5_5_5_1, image); FIXME: use this
             gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+            //gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGB5_A1, gl.UNSIGNED_SHORT_5_5_5_1, image); FIXME: use this
+
+            // gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+            // gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+
+            // // Prevents s-coordinate wrapping (repeating).
+            // gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+            // // Prevents t-coordinate wrapping (repeating).
+            // gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+
+            //gl.generateMipmap(gl.TEXTURE_2D);
 
             resolve(tex);
         };

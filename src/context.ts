@@ -6,6 +6,7 @@ import { CreateTerrain } from './terrain';
 import { mat4 } from "gl-matrix";
 import ImgRatAnim from '../assets/rat.png';
 import ImgCheese from '../assets/cheese.png';
+// import ImgCheese from '../assets-raw/cheese3.png';
 
 // Contains several GL related elements necessary for rendering.
 
@@ -17,8 +18,14 @@ export async function CreateContext(canvas: HTMLCanvasElement) {
     const uvsBasic = gl.createBuffer();
     if (!uvsBasic) throw new Error('Error creating buffer');
     gl.bindBuffer(gl.ARRAY_BUFFER, uvsBasic);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([0, 0, 1, 0, 1, 1, 0, 1]), gl.STATIC_DRAW);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+        0, 0, .25, 0, 0, 1, .25, 1,
+        .25 + 0, 0, .25 + .25, 0, .25 + 0, 1, .25 + .25, 1,
+        .5 + 0, 0, .5 + .25, 0, .5 + 0, 1, .5 + .25, 1,
+        .75 + 0, 0, .75 + .25, 0, .75 + 0, 1, .75 + .25, 1,
+    ]), gl.STATIC_DRAW);
 
+    gl.disable(gl.CULL_FACE);
 
     return {
         canvas,

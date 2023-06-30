@@ -1,4 +1,4 @@
-import { ReadonlyVec3, mat4, vec3 } from "gl-matrix";
+import { ReadonlyMat4, ReadonlyVec3, mat4, vec3 } from "gl-matrix";
 import { Piece } from "../piece";
 import { World } from "../world";
 import { DrawActorQuadTEMP } from "..";
@@ -90,7 +90,7 @@ abstract class ActorState {
     abstract OnUpdate(time: number, deltaTime: number): void;
     OnExit(): void { }
 
-    OnDraw(ctx: Context): void {
+    GetTransform(ctx: Context): ReadonlyMat4 {
         const wiggleAngleRad = this._actor.wiggle * 10 * DEG_TO_RAD;
         const t = (1 - Math.abs(this._actor.wiggle));
         const h = t * 0.25;
@@ -103,10 +103,13 @@ abstract class ActorState {
         mat4.multiply(xf, xf, ctx.mtxSpriteFaceCamera);
         mat4.rotateZ(xf, xf, wiggleAngleRad);
         mat4.scale(xf, xf, [1 - h / 2, 1 + h, 1]); // Stretch
-        mat4.scale(xf, xf, [0.1, 0.1, 0.1]);
+        //mat4.scale(xf, xf, [0.1, 0.1, 0.1]);
+        mat4.scale(xf, xf, [0.25, 0.25, 0.25]);
 
-        //FIXME: Coupled to DrawQuad in index.ts
-        DrawActorQuadTEMP(ctx, xf, [0, 1, 0, 1]);
+        return xf;
+
+        // //FIXME: Coupled to DrawQuad in index.ts
+        // DrawActorQuadTEMP(ctx, xf, [0, 1, 0, 1]);
     }
 
     //
