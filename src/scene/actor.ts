@@ -109,12 +109,10 @@ abstract class ActorState {
         mat4.identity(xf);
         mat4.translate(xf, xf, this._actor.position);
         if (this.CanDance())
-            mat4.translate(xf, xf, [0, t * 0.1, 0]);
+            mat4.translate(xf, xf, [0, t * 0.1, 0]); // Dancing little jump
         mat4.multiply(xf, xf, ctx.mtxSpriteFaceCamera);
         mat4.rotateZ(xf, xf, wiggleAngleRad);
-        mat4.scale(xf, xf, [1 - h / 2, 1 + h, 1]); // Stretch
-        //mat4.scale(xf, xf, [0.1, 0.1, 0.1]);
-        //mat4.scale(xf, xf, [0.25, 0.25, 0.25]); //!!!
+        mat4.scale(xf, xf, [1 - h / 2, 1 + h, 1]); // Wiggle stretch
         mat4.scale(xf, xf, [0.33, 0.33, 0.33]);
 
         let xFlip = this._actor.facingX < 0;
@@ -122,9 +120,6 @@ abstract class ActorState {
         if (xFlip) mat4.scale(xf, xf, [-1, 1, 1]);
 
         return xf;
-
-        // //FIXME: Coupled to DrawQuad in index.ts
-        // DrawActorQuadTEMP(ctx, xf, [0, 1, 0, 1]);
     }
 
     //
@@ -133,8 +128,11 @@ abstract class ActorState {
 
     // Returns true if the collect assignment was accepted
     Collect(_piece: Piece) { return false; }
+
     Dance() { }
+
     CanDance() { return false; }
+
     Scare() {
         this._actor.ChangeState(new ScareState(this._actor));
     }
@@ -158,12 +156,12 @@ class IdleState extends ActorState {
 }
 
 class InitialState extends IdleState {
-    CanDance() { return false; }
     override Scare() {
         this._actor.ChangeState(new ScareState(this._actor));
         return true;
     }
     GetFrame(_time: number) { return 2; }
+    CanDance() { return false; }
 }
 
 class DanceState extends ActorState {
@@ -252,7 +250,7 @@ class ClimbDownState extends ActorState {
     }
 
     override Collect(piece: Piece) {
-        // Wait for it to reach the ground before collecting again (to avoid "flying")
+        // Wait for it to reach the ground before collecting again (to avoid "flying" towards next objective)
         if (this._actor.position[1] > this._target[1] - 1) { return false; }
 
         this._actor.ChangeState(new CollectState(this._actor, piece));
@@ -280,14 +278,17 @@ class ScareState extends ActorState {
     }
 
     OnUpdate(time: number, deltaTime: number) {
-        const t = Math.min(this._timeSinceStart / this._ttl, 1);
-        if (t >= 1) {
+        const tNorm = Math.min(this._timeSinceStart / this._ttl, 1);
+        if (tNorm >= 1) {
             vec3.copy(this._actor.position, this._startPosition);
             this._actor.ChangeState(new ClimbDownState(this._actor));
         }
         else {
-            //const h = 1 - Math.abs(t * 2 - 1);
-            const h = t < 0.2 ? (t / 0.2) : (1 - (t - 0.2) / 0.8);
+            // Jolt faster than falling
+            //   /'-._
+            //  /     '-._
+            // /          '-.
+            const h = tNorm < 0.2 ? (tNorm / 0.2) : (1 - (tNorm - 0.2) / 0.8);
             vec3.add(this._actor.position, this._startPosition, [0, h * SCARE_JUMP_HEIGHT, 0]);
             this._timeSinceStart += deltaTime;
         }

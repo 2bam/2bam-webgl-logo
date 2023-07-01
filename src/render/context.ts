@@ -25,7 +25,6 @@ function CreateTileMapUVs(columns: number, rows: number, frames: number) {
     for (let i = 0; i < us.length; i++) {
         uvs.push(us[i] / columns, vs[i] / rows);
     }
-    console.log(uvs);
     return uvs;
 }
 
@@ -69,16 +68,6 @@ export async function CreateContext(canvas: HTMLCanvasElement) {
             ["uProjection", "uView", "uModel", "uTexture"]
         ),
 
-        // const defaultProgram = LoadProgram(gl, SHADER_VERTEX_DEFAULT, SHADER_FRAGMENT_DEFAULT);
-        // const aVertexPosition = gl.getAttribLocation(defaultProgram, 'aVertexPosition');
-        // const aVertexColor = gl.getAttribLocation(defaultProgram, 'aVertexColor');
-        // const uProjection = gl.getUniformLocation(defaultProgram, 'uProjection');
-        // const uView = gl.getUniformLocation(defaultProgram, 'uView');
-        // const uModel = gl.getUniformLocation(defaultProgram, 'uModel');
-        //
-        // const matRat = LoadMaterial(gl, SHADER_VERTEX_TEXTURE, SHADER_FRAGMENT_TEXTURE, ["aVertexPosition", "aVertexColor", "aTexCoord"], ["uProjection", "uView", "uModel", "uTexture"]);
-
-
         meshQuad: CreateMesh(
             gl,
             [
@@ -94,8 +83,7 @@ export async function CreateContext(canvas: HTMLCanvasElement) {
 
         /*{ meshTerrain, colorsTerrain }*/ ...CreateTerrain(gl),
 
-        // Special transform updated each frame to make sprites face the camera
-        mtxSpriteFaceCamera: mat4.create(),
+        mtxSpriteFaceCamera: mat4.create(), // Special transform updated each frame to make sprites face the camera
 
         texRatAnim: await LoadTexture(gl, ImgRatAnim),
         texCheese: await LoadTexture(gl, ImgCheese),

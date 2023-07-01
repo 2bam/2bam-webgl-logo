@@ -96,9 +96,9 @@ function ScheduleActorsThink(world: World) {
         const notAssigned = notPlaced.filter(p => !world.assigned.has(p.uid));
         const notMidFlight = notAssigned.filter(p => p.position[1] === 0);
 
-        // FIXME: Possibly better to have some time before that...To make sure the dude actually waits if another needs
-        //        to go first. Maybe that wait "at base" can go in Actors's PlaceState
-        // const candidates = notMidFlight.filter(p => p.needs.length === 0 || p.needs.some(n => world.placed.has(n) || world.assigned.has(n)));
+        // TODO: Possibly better to have some time before that...To make sure the dude actually waits if another needs
+        //       to go first. Maybe that wait "at base" can go in Actors's PlaceState
+        //       const candidates = notMidFlight.filter(p => p.needs.length === 0 || p.needs.some(n => world.placed.has(n) || world.assigned.has(n)));
         const candidates = notMidFlight.filter(p => p.needs.length === 0 || p.needs.some(n => world.placed.has(n)));
 
         if (candidates.length) {
@@ -118,8 +118,6 @@ function ScheduleActorsThink(world: World) {
 
     setTimeout(() => ScheduleActorsThink(world), 100);
 }
-
-
 
 function CreatePiecesWithDependencies(logo: string, meshesPieces: { [ch: string]: Mesh; }): Piece[] {
     console.log(logo);
@@ -146,10 +144,9 @@ function CreatePiecesWithDependencies(logo: string, meshesPieces: { [ch: string]
     // Here we connect dependencies so they grow the sign one piece after another instead of randomly
     // (which sometimes would make pieces look like they're flying)
     const withNeeds = characters.map(e => {
-        //const needs = prevLevel.filter(e => Math.abs(e.gx - gx) <= 1).map(e => e.uid);
         const needs =
             e.gy === 0
-                ? [] // Special case, make ground level pieces depend on nothing so they can be placed always
+                ? [] // Special case, make ground level pieces depend on nothing so they can be placed always right away
                 : characters
                     .filter(other => Math.abs(other.gx - e.gx) <= 1 && Math.abs(other.gy - e.gy) <= 1)
                     .map(e => e.uid);
@@ -170,7 +167,7 @@ function CreatePiecesWithDependencies(logo: string, meshesPieces: { [ch: string]
             transform: mat4.create(),
             needs,
             mesh,
-            random: Math.floor(Math.random() * 4)
+            randomInt: Math.floor(Math.random() * 4)
         };
     });
     return pieces;
@@ -187,7 +184,9 @@ function Scatter(world: World) {
         p.velocity[0] = (Math.random() - 0.5) * 5;
         p.velocity[1] = 5 + Math.random() * 0.5;
         p.velocity[2] = (Math.random() - 0.5) * 5;
-        p.position[1] = Math.max(p.position[1] + 0.1, 0); //FIXME: Why is this needed if the floor check is done after the integration?
+
+        //FIXME: Why is this needed if the floor check is done after the integration?
+        p.position[1] = Math.max(p.position[1] + 0.1, 0);
 
         p.eulerVelocity[0] = (Math.random() - 0.5) * 3000;
         p.eulerVelocity[1] = (Math.random() - 0.5) * 3000;
@@ -228,7 +227,7 @@ function RenderScene(ctx: RenderContext, { actors, pieces }: World, time: number
 
     gl.viewport(0, 0, canvas.width, canvas.height);
 
-    //FIXME: Why do we have to do it each frame?  If we never clear the Stencil Buffer? Maybe because of the viewport, but otherwise (if not changed) why?
+
     ApplyStencil(ctx);
 
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -262,8 +261,6 @@ function RenderScene(ctx: RenderContext, { actors, pieces }: World, time: number
     gl.enable(gl.DEPTH_TEST);
     gl.clear(gl.DEPTH_BUFFER_BIT);
 
-
-
     // Draw flying sprites
     // DrawSprite(gl, [1, 0, 0], [1, 0, 1, 1], 'actor');
     // DrawSprite(gl, [1, 1, 0], [1, .5, 1, 1], 'actor');
@@ -272,39 +269,22 @@ function RenderScene(ctx: RenderContext, { actors, pieces }: World, time: number
     // DrawSprite(gl, [-1, 1, 1], [.5, 0, 1, 1], 'actor');
     ////drawSprite(gl, [-1, 1, 2], [.5, 1, 1, 1], 'actor');
 
-
-    // for (const piece of pieces) {
-    //     piecesQuads.add(piece.position
-
-    // }
-
     gl.useProgram(ctx.materialUnlitTex.program);
     gl.uniformMatrix4fv(ctx.materialUnlitTex.uniform.uProjection, false, mtxProjection);
     gl.uniformMatrix4fv(ctx.materialUnlitTex.uniform.uView, false, mtxView);
     for (const actor of actors) {
-        //console.log(actor.state.constructor.name);
-
-        //l.bindTexture(gl.TEXTURE_2D, texRat);
-        //gl.useProgram(texProgram);
-
         const xf = actor.state.GetTransform(ctx);
-
-        //const off = Math.floor(((time * 4) % 1) * 4) * 32;
-        //const off = Math.floor(((time / 4) % 1) * 4) * 32;
-        const uvOffset = actor.state.GetFrame(time) * 32;
-
-        DrawTexturedMesh(gl, xf, ctx.meshQuad, ctx.materialUnlitTex, ctx.texRatAnim, ctx.uvsBasic, uvOffset);
+        const uvsOffset = actor.state.GetFrame(time) * 32;
+        DrawTexturedMesh(gl, xf, ctx.meshQuad, ctx.materialUnlitTex, ctx.texRatAnim, ctx.uvsBasic, uvsOffset);
 
     }
-
 
     gl.useProgram(ctx.materialUnlitTex.program);
     gl.uniformMatrix4fv(ctx.materialUnlitTex.uniform.uProjection, false, mtxProjection);
     gl.uniformMatrix4fv(ctx.materialUnlitTex.uniform.uView, false, mtxView);
     for (const piece of pieces) {
-        //if (placed.has(piece.uid))
-        DrawTexturedMesh(gl, piece.transform, piece.mesh, ctx.materialUnlitTex, ctx.texCheese, ctx.uvsBasic, piece.random * 32);
-        //DrawMesh(gl, piece.transform, piece.mesh, ctx.materialDefault);
+        const uvsOffset = piece.randomInt * 32; // Get a random cheese "tile" to give some variety
+        DrawTexturedMesh(gl, piece.transform, piece.mesh, ctx.materialUnlitTex, ctx.texCheese, ctx.uvsBasic, uvsOffset);
     }
 
 }
