@@ -33,10 +33,10 @@ export class Actor {
         this.state = newState;
     }
 
-    // FIXME: This should be split in two funcs and two states (Climb/Walk) restoring original state (kept as ref) upon reach
+    // TODO: This should be split in two funcs and two states (Climb/Walk) restoring original state (kept as ref) upon reach
     MoveTowards(to: ReadonlyVec3, deltaTime: number) {
         // In this method we assume wherever the character may need to go, if higher than the ground, then it must be at
-        // the sign placement. As such we avoid needing to detect proximity to the sign, just reach first the base at 
+        // the sign placement. As such we avoid needing to detect proximity to the sign, just reach first the base at
         // ground level and then climb up. Afterwards, if not at ground level, climb down before moving anywhere else.
         const from = this.position;
 
@@ -56,17 +56,14 @@ export class Actor {
 
         const direction = vec3.create();
         if (vec3.sqrLen(delta) < ACTOR_REACH_THRESHOLD * ACTOR_REACH_THRESHOLD) {
-            return 'reached';
-        }
-        else if (to[1] < from[1]) {
+            return "reached";
+        } else if (to[1] < from[1]) {
             // If higher than ground climb down
             vec3.copy(move, deltaY);
-        }
-        else if (vec3.sqrLen(deltaXZ) < ACTOR_REACH_THRESHOLD * ACTOR_REACH_THRESHOLD) {
+        } else if (vec3.sqrLen(deltaXZ) < ACTOR_REACH_THRESHOLD * ACTOR_REACH_THRESHOLD) {
             // If at the base of target, climb up
             vec3.copy(move, deltaY);
-        }
-        else {
+        } else {
             // If at not at the base, walk in xz plane
             // TODO: lerp heightmap to follow ground
             vec3.copy(move, deltaXZ);
@@ -77,10 +74,9 @@ export class Actor {
         if (direction[0] < 0) this.facingX = -1;
         else if (direction[0] > 0) this.facingX = 1;
 
-        return 'moving';
+        return "moving";
     }
 }
-
 
 abstract class ActorState {
     protected _actor;
@@ -94,7 +90,7 @@ abstract class ActorState {
     //
 
     abstract OnUpdate(time: number, deltaTime: number): void;
-    OnExit(): void { }
+    OnExit(): void {}
 
     GetFrame(time: number): number {
         return Math.floor(((time * 4) % 1) * 4);
@@ -102,14 +98,13 @@ abstract class ActorState {
 
     GetTransform(ctx: RenderContext): ReadonlyMat4 {
         const wiggleAngleRad = this._actor.wiggle * 10 * DEG_TO_RAD;
-        const t = (1 - Math.abs(this._actor.wiggle));
+        const t = 1 - Math.abs(this._actor.wiggle);
         const h = t * 0.25;
 
         const xf = this._actor.transform;
         mat4.identity(xf);
         mat4.translate(xf, xf, this._actor.position);
-        if (this.CanDance())
-            mat4.translate(xf, xf, [0, t * 0.1, 0]); // Dancing little jump
+        if (this.CanDance()) mat4.translate(xf, xf, [0, t * 0.1, 0]); // Dancing little jump
         mat4.multiply(xf, xf, ctx.mtxSpriteFaceCamera);
         mat4.rotateZ(xf, xf, wiggleAngleRad);
         mat4.scale(xf, xf, [1 - h / 2, 1 + h, 1]); // Wiggle stretch
@@ -127,11 +122,15 @@ abstract class ActorState {
     //
 
     // Returns true if the collect assignment was accepted
-    Collect(_piece: Piece) { return false; }
+    Collect(_piece: Piece) {
+        return false;
+    }
 
-    Dance() { }
+    Dance() {}
 
-    CanDance() { return false; }
+    CanDance() {
+        return false;
+    }
 
     Scare() {
         this._actor.ChangeState(new ScareState(this._actor));
@@ -139,8 +138,7 @@ abstract class ActorState {
 }
 
 class IdleState extends ActorState {
-    override OnUpdate(time: number, deltaTime: number) {
-    }
+    override OnUpdate(time: number, deltaTime: number) {}
 
     override Collect(piece: Piece) {
         this._actor.ChangeState(new CollectState(this._actor, piece));
@@ -152,7 +150,9 @@ class IdleState extends ActorState {
         return true;
     }
 
-    CanDance() { return true; }
+    CanDance() {
+        return true;
+    }
 }
 
 class InitialState extends IdleState {
@@ -160,8 +160,12 @@ class InitialState extends IdleState {
         this._actor.ChangeState(new ScareState(this._actor));
         return true;
     }
-    GetFrame(_time: number) { return 2; }
-    CanDance() { return false; }
+    GetFrame(_time: number) {
+        return 2;
+    }
+    CanDance() {
+        return false;
+    }
 }
 
 class DanceState extends ActorState {
@@ -183,11 +187,14 @@ class DanceState extends ActorState {
         return true;
     }
 
-    override CanDance() { return true; }
+    override CanDance() {
+        return true;
+    }
 
-    override GetFrame(_time: number) { return 4; }
+    override GetFrame(_time: number) {
+        return 4;
+    }
 }
-
 
 class CollectState extends ActorState {
     _piece: Piece;
@@ -198,11 +205,10 @@ class CollectState extends ActorState {
         this._actor.world.assigned.add(this._piece.uid);
     }
 
-
     override OnUpdate(time: number, deltaTime: number) {
         //TODO: if not on ground, wait for it to fall
         const result = this._actor.MoveTowards(this._piece.position, deltaTime);
-        if (result === 'reached') {
+        if (result === "reached") {
             this._actor.ChangeState(new PlaceState(this._actor, this._piece));
             vec3.zero(this._piece.velocity);
             vec3.zero(this._piece.eulerVelocity);
@@ -228,7 +234,7 @@ class PlaceState extends ActorState {
         const result = this._actor.MoveTowards(this._piece.targetPosition, deltaTime);
         vec3.copy(this._piece.position, this._actor.position);
         this._piece.position[1] += 0.2; // Keep it over our heads
-        if (result === 'reached') {
+        if (result === "reached") {
             this._actor.world.PlacePiece(this._piece);
             this._actor.world.assigned.delete(this._piece.uid);
             this._actor.ChangeState(new ClimbDownState(this._actor, RandomFrontLocation()));
@@ -251,7 +257,9 @@ class ClimbDownState extends ActorState {
 
     override Collect(piece: Piece) {
         // Wait for it to reach the ground before collecting again (to avoid "flying" towards next objective)
-        if (this._actor.position[1] > this._target[1] - 1) { return false; }
+        if (this._actor.position[1] > this._target[1] - 1) {
+            return false;
+        }
 
         this._actor.ChangeState(new CollectState(this._actor, piece));
         return true;
@@ -259,7 +267,7 @@ class ClimbDownState extends ActorState {
 
     OnUpdate(time: number, deltaTime: number) {
         const result = this._actor.MoveTowards(this._target, deltaTime);
-        if (result === 'reached') {
+        if (result === "reached") {
             this._actor.ChangeState(new IdleState(this._actor));
         }
     }
@@ -282,18 +290,18 @@ class ScareState extends ActorState {
         if (tNorm >= 1) {
             vec3.copy(this._actor.position, this._startPosition);
             this._actor.ChangeState(new ClimbDownState(this._actor));
-        }
-        else {
+        } else {
             // Jolt faster than falling
             //   /'-._
             //  /     '-._
             // /          '-.
-            const h = tNorm < 0.2 ? (tNorm / 0.2) : (1 - (tNorm - 0.2) / 0.8);
+            const h = tNorm < 0.2 ? tNorm / 0.2 : 1 - (tNorm - 0.2) / 0.8;
             vec3.add(this._actor.position, this._startPosition, [0, h * SCARE_JUMP_HEIGHT, 0]);
             this._timeSinceStart += deltaTime;
         }
     }
 
-    override GetFrame(_time: number) { return 5; }
-
+    override GetFrame(_time: number) {
+        return 5;
+    }
 }

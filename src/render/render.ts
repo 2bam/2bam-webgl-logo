@@ -5,8 +5,16 @@ import { Material } from "./material";
 
 const MTX_IDENTITY: ReadonlyMat4 = mat4.create();
 
-export function DrawQuad({ gl, meshQuad }: RenderContext, transform: ReadonlyMat4, color: ReadonlyVec4, material: Material<'aVertexPosition' | 'aVertexColor', 'uModel'>) {
-    const { attrib: { aVertexPosition, aVertexColor }, uniform: { uModel } } = material;
+export function DrawQuad(
+    { gl, meshQuad }: RenderContext,
+    transform: ReadonlyMat4,
+    color: ReadonlyVec4,
+    material: Material<"aVertexPosition" | "aVertexColor", "uModel">
+) {
+    const {
+        attrib: { aVertexPosition, aVertexColor },
+        uniform: { uModel },
+    } = material;
 
     gl.uniformMatrix4fv(uModel, false, transform);
 
@@ -19,11 +27,19 @@ export function DrawQuad({ gl, meshQuad }: RenderContext, transform: ReadonlyMat
     gl.vertexAttrib4f(aVertexColor, color[0], color[1], color[2], color[3]);
 
     gl.drawElements(gl.TRIANGLE_STRIP, 4, gl.UNSIGNED_SHORT, 0);
-
 }
 
-export function DrawMesh(gl: WebGLRenderingContext, transform: ReadonlyMat4, mesh: Mesh, material: Material<'aVertexPosition' | 'aVertexColor', 'uModel'>, tex?: WebGLTexture) {
-    const { attrib: { aVertexPosition, aVertexColor }, uniform: { uModel } } = material;
+export function DrawMesh(
+    gl: WebGLRenderingContext,
+    transform: ReadonlyMat4,
+    mesh: Mesh,
+    material: Material<"aVertexPosition" | "aVertexColor", "uModel">,
+    tex?: WebGLTexture
+) {
+    const {
+        attrib: { aVertexPosition, aVertexColor },
+        uniform: { uModel },
+    } = material;
 
     gl.uniformMatrix4fv(uModel, false, transform);
 
@@ -38,8 +54,19 @@ export function DrawMesh(gl: WebGLRenderingContext, transform: ReadonlyMat4, mes
     gl.drawElements(gl.TRIANGLE_STRIP, mesh.indexCount, gl.UNSIGNED_SHORT, 0);
 }
 
-export function DrawTexturedMesh(gl: WebGLRenderingContext, transform: ReadonlyMat4, mesh: Mesh, material: Material<'aVertexPosition' | 'aVertexColor' | 'aTexCoord', 'uModel' | 'uTexture'>, tex: WebGLTexture, uvs: WebGLBuffer, uvsOffset: number) {
-    const { attrib: { aVertexPosition, aVertexColor, aTexCoord }, uniform: { uModel } } = material;
+export function DrawTexturedMesh(
+    gl: WebGLRenderingContext,
+    transform: ReadonlyMat4,
+    mesh: Mesh,
+    material: Material<"aVertexPosition" | "aVertexColor" | "aTexCoord", "uModel" | "uTexture">,
+    tex: WebGLTexture,
+    uvs: WebGLBuffer,
+    uvsOffset: number
+) {
+    const {
+        attrib: { aVertexPosition, aVertexColor, aTexCoord },
+        uniform: { uModel },
+    } = material;
 
     gl.uniformMatrix4fv(uModel, false, transform);
 
@@ -63,8 +90,16 @@ export function DrawTexturedMesh(gl: WebGLRenderingContext, transform: ReadonlyM
     gl.drawElements(gl.TRIANGLE_STRIP, mesh.indexCount, gl.UNSIGNED_SHORT, 0);
 }
 
-export function DrawTerrain(gl: WebGLRenderingContext, meshTerrain: Mesh, colorsTerrain: WebGLBuffer, material: Material<'aVertexPosition' | 'aVertexColor', 'uModel'>) {
-    const { attrib: { aVertexPosition, aVertexColor }, uniform: { uModel } } = material;
+export function DrawTerrain(
+    gl: WebGLRenderingContext,
+    meshTerrain: Mesh,
+    colorsTerrain: WebGLBuffer,
+    material: Material<"aVertexPosition" | "aVertexColor", "uModel">
+) {
+    const {
+        attrib: { aVertexPosition, aVertexColor },
+        uniform: { uModel },
+    } = material;
 
     gl.uniformMatrix4fv(uModel, false, MTX_IDENTITY);
 
@@ -81,7 +116,6 @@ export function DrawTerrain(gl: WebGLRenderingContext, meshTerrain: Mesh, colors
 
     // Also draw a gray wireframe on top of the terrain mesh
     gl.disableVertexAttribArray(aVertexColor);
-    gl.vertexAttrib4f(aVertexColor, .13, .13, .13, 1);
+    gl.vertexAttrib4f(aVertexColor, 0.13, 0.13, 0.13, 1);
     gl.drawElements(gl.LINES, meshTerrain.indexCount, gl.UNSIGNED_SHORT, 0);
 }
-

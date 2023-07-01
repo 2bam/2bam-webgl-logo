@@ -1,10 +1,10 @@
-import { vec3, mat4 } from 'gl-matrix';
-import { DEG_TO_RAD, RandomFrontLocation } from './utils-math';
-import { Piece, UpdatePieceTransform } from './scene/piece';
-import { Actor } from './scene/actor';
-import { World } from './scene/world';
-import { Mesh } from './render/mesh';
-import { RenderContext, CreateContext } from './render/context';
+import { vec3, mat4 } from "gl-matrix";
+import { DEG_TO_RAD, RandomFrontLocation } from "./utils-math";
+import { Piece, UpdatePieceTransform } from "./scene/piece";
+import { Actor } from "./scene/actor";
+import { World } from "./scene/world";
+import { Mesh } from "./render/mesh";
+import { RenderContext, CreateContext } from "./render/context";
 import { ApplyStencil } from "./render/stencil";
 import { DrawTerrain, DrawTexturedMesh } from "./render/render";
 
@@ -32,7 +32,7 @@ export async function Main(canvas: HTMLCanvasElement) {
     function onTap() {
         Scatter(world);
     }
-    canvas.addEventListener('click', onTap);
+    canvas.addEventListener("click", onTap);
     //canvas.addEventListener('touchstart', onTap);
 
     canvas.addEventListener("webglcontextlost", () => {
@@ -58,7 +58,9 @@ function WorldSetup({ meshesPieces }: RenderContext) {
     for (const piece of pieces) world.PlacePiece(piece);
 
     const actors: Actor[] = [];
-    for (let i = 0; i < 10; i++) { actors.push(new Actor(world, RandomFrontLocation())); }
+    for (let i = 0; i < 10; i++) {
+        actors.push(new Actor(world, RandomFrontLocation()));
+    }
 
     world.pieces = pieces;
     world.actors = actors;
@@ -91,8 +93,7 @@ function ScheduleActorsThink(world: World) {
         for (const actor of actors) {
             actor.state.Dance();
         }
-    }
-    else {
+    } else {
         const notAssigned = notPlaced.filter(p => !world.assigned.has(p.uid));
         const notMidFlight = notAssigned.filter(p => p.position[1] === 0);
 
@@ -103,7 +104,9 @@ function ScheduleActorsThink(world: World) {
 
         if (candidates.length) {
             // Build from the bottom up (choose lower "y" first)
-            candidates.sort((a, b) => a.targetPosition[1] !== b.targetPosition[1] ? a.targetPosition[1] - b.targetPosition[1] : Math.random());
+            candidates.sort((a, b) =>
+                a.targetPosition[1] !== b.targetPosition[1] ? a.targetPosition[1] - b.targetPosition[1] : Math.random()
+            );
 
             let candidateIndex = 0;
             actors.sort((a, b) => Math.random());
@@ -119,28 +122,29 @@ function ScheduleActorsThink(world: World) {
     setTimeout(() => ScheduleActorsThink(world), 100);
 }
 
-function CreatePiecesWithDependencies(logo: string, meshesPieces: { [ch: string]: Mesh; }): Piece[] {
+function CreatePiecesWithDependencies(logo: string, meshesPieces: { [ch: string]: Mesh }): Piece[] {
     console.log(logo);
-    const lines = logo.split('\n');
+    const lines = logo.split("\n");
     lines.reverse();
 
     const compactLines = lines
-        .map(l =>
-            [...l]
-                .map((ch, gx) => ({ ch, gx }))
-                .filter(e => e.ch !== ' ')
-        )
-        .filter(l => l.length > 0)
-        ;
-
+        .map(l => {
+            const chars = [...l];
+            return chars.map((ch, gx) => ({ ch, gx })).filter(e => e.ch !== " ");
+        })
+        .filter(l => l.length > 0);
     let nextPieceUid = 1;
     const characters = compactLines
-        .map(
-            (es, gy) => es.map(({ ch, gx }) => ({ gx, gy, ch, needs: [], uid: nextPieceUid++ }))
+        .map((es, gy) =>
+            es.map(({ ch, gx }) => ({
+                gx,
+                gy,
+                ch,
+                needs: [],
+                uid: nextPieceUid++,
+            }))
         )
-        .flat()
-        ;
-
+        .flat();
     // Here we connect dependencies so they grow the sign one piece after another instead of randomly
     // (which sometimes would make pieces look like they're flying)
     const withNeeds = characters.map(e => {
@@ -148,15 +152,15 @@ function CreatePiecesWithDependencies(logo: string, meshesPieces: { [ch: string]
             e.gy === 0
                 ? [] // Special case, make ground level pieces depend on nothing so they can be placed always right away
                 : characters
-                    .filter(other => Math.abs(other.gx - e.gx) <= 1 && Math.abs(other.gy - e.gy) <= 1)
-                    .map(e => e.uid);
+                      .filter(other => Math.abs(other.gx - e.gx) <= 1 && Math.abs(other.gy - e.gy) <= 1)
+                      .map(e => e.uid);
 
         return { ...e, needs };
     });
 
     const pieces: Piece[] = withNeeds.map(({ gx, gy, uid, needs, ch }) => {
-        const position: vec3 = [gx * .2 - 3, gy * .2, 0];
-        const mesh = meshesPieces[ch] ? meshesPieces[ch] : meshesPieces['default'];
+        const position: vec3 = [gx * 0.2 - 3, gy * 0.2, 0];
+        const mesh = meshesPieces[ch] ? meshesPieces[ch] : meshesPieces["default"];
         return {
             uid,
             position,
@@ -167,7 +171,7 @@ function CreatePiecesWithDependencies(logo: string, meshesPieces: { [ch: string]
             transform: mat4.create(),
             needs,
             mesh,
-            randomInt: Math.floor(Math.random() * 4)
+            randomInt: Math.floor(Math.random() * 4),
         };
     });
     return pieces;
@@ -219,7 +223,6 @@ function UpdateEntities({ pieces, actors, placed }: World, time: number, deltaTi
     for (const actor of actors) {
         actor.state.OnUpdate(time, deltaTime);
     }
-
 }
 
 function RenderScene(ctx: RenderContext, { actors, pieces }: World, time: number) {
@@ -227,13 +230,11 @@ function RenderScene(ctx: RenderContext, { actors, pieces }: World, time: number
 
     gl.viewport(0, 0, canvas.width, canvas.height);
 
-
     ApplyStencil(ctx);
 
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
     gl.useProgram(materialDefault.program);
-
 
     const mtxProjection = mat4.create();
     const mtxView = mat4.create();
@@ -276,7 +277,6 @@ function RenderScene(ctx: RenderContext, { actors, pieces }: World, time: number
         const xf = actor.state.GetTransform(ctx);
         const uvsOffset = actor.state.GetFrame(time) * 32;
         DrawTexturedMesh(gl, xf, ctx.meshQuad, ctx.materialUnlitTex, ctx.texRatAnim, ctx.uvsBasic, uvsOffset);
-
     }
 
     gl.useProgram(ctx.materialUnlitTex.program);
@@ -286,5 +286,4 @@ function RenderScene(ctx: RenderContext, { actors, pieces }: World, time: number
         const uvsOffset = piece.randomInt * 32; // Get a random cheese "tile" to give some variety
         DrawTexturedMesh(gl, piece.transform, piece.mesh, ctx.materialUnlitTex, ctx.texCheese, ctx.uvsBasic, uvsOffset);
     }
-
 }

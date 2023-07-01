@@ -1,8 +1,7 @@
 import { vec3 } from "gl-matrix";
 
-
-function LoadShader(gl: WebGLRenderingContext, type: 'vertex' | 'fragment', sourceCode: string) {
-    const shader = gl.createShader(type === 'vertex' ? gl.VERTEX_SHADER : gl.FRAGMENT_SHADER);
+function LoadShader(gl: WebGLRenderingContext, type: "vertex" | "fragment", sourceCode: string) {
+    const shader = gl.createShader(type === "vertex" ? gl.VERTEX_SHADER : gl.FRAGMENT_SHADER);
     if (!shader) {
         throw new Error(`Error creating ${type} shader`);
     }
@@ -11,17 +10,17 @@ function LoadShader(gl: WebGLRenderingContext, type: 'vertex' | 'fragment', sour
     if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
         var compilationLog = gl.getShaderInfoLog(shader);
         console.error(`Couldn't compile ${type} shader`);
-        console.error('Shader compiler log: ' + compilationLog);
+        console.error("Shader compiler log: " + compilationLog);
         gl.deleteShader(shader);
-        throw new Error('Error compiling shader');
+        throw new Error("Error compiling shader");
     }
     return shader;
 }
 
 export function LoadProgram(gl: WebGLRenderingContext, vertexShader: string, fragmentShader: string) {
     const program = gl.createProgram();
-    gl.attachShader(program, LoadShader(gl, 'vertex', vertexShader));
-    gl.attachShader(program, LoadShader(gl, 'fragment', fragmentShader));
+    gl.attachShader(program, LoadShader(gl, "vertex", vertexShader));
+    gl.attachShader(program, LoadShader(gl, "fragment", fragmentShader));
     gl.linkProgram(program);
 
     if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
@@ -53,7 +52,7 @@ export async function LoadTexture(gl: WebGLRenderingContext, src: string): Promi
 
             resolve(tex);
         };
-        image.onerror = (err) => reject(err);
+        image.onerror = err => reject(err);
         image.src = src;
     });
 }
@@ -69,11 +68,10 @@ export function ExtrudeTriangleStripWithoutCentralVertices(vertices: vec3[], ind
     const newVertices = vertices.concat(vertices.map(v => vec3.add(vec3.create(), v, zOffset)));
     const newIndices = indices.concat(indices.map(i => i + iOffset));
     // Then, zip 'em
-    for (let i = 0; i < indices.length; i++)
-        newIndices.push(newIndices[i], newIndices[i + iOffset]);
+    for (let i = 0; i < indices.length; i++) newIndices.push(newIndices[i], newIndices[i + iOffset]);
 
     return { vertices: newVertices, indices: newIndices };
-};
+}
 
 export function FlatVec3(vs: vec3[]): number[] {
     return vs.flatMap(v => [...v]);

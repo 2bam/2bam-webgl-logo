@@ -25,7 +25,14 @@ export function CreateTerrain(gl: WebGLRenderingContext) {
     let index = 0;
     for (let z = -5; z < 6; z++) {
         for (let x = -10; x < 9; x++) {
-            terrainIdx.push(index, index + 1, index + TERRAIN_STRIDE + 1, index + TERRAIN_STRIDE + 1, index + TERRAIN_STRIDE, index);
+            terrainIdx.push(
+                index,
+                index + 1,
+                index + TERRAIN_STRIDE + 1,
+                index + TERRAIN_STRIDE + 1,
+                index + TERRAIN_STRIDE,
+                index
+            );
             index++;
         }
         index++;
@@ -39,4 +46,3 @@ export function CreateTerrain(gl: WebGLRenderingContext) {
 
     return { meshTerrain, colorsTerrain };
 }
-

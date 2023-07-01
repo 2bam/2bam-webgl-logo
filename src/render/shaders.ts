@@ -1,4 +1,3 @@
-
 export const SHADER_VERTEX_DEFAULT = `
     attribute vec3 aVertexPosition;
     attribute vec4 aVertexColor;
@@ -20,7 +19,6 @@ export const SHADER_FRAGMENT_DEFAULT = `
     }
 `;
 
-
 export const SHADER_VERTEX_STENCIL = `
     attribute vec3 aVertexPosition;
     void main() {
@@ -34,7 +32,6 @@ export const SHADER_FRAGMENT_STENCIL = `
         gl_FragColor = vec4(1,1,1,1);
     }
 `;
-
 
 export const SHADER_VERTEX_TEXTURE = `
     attribute vec3 aVertexPosition;
