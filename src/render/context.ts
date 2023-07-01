@@ -1,4 +1,5 @@
-import { LoadMaterial, LoadTexture } from './utils-render';
+import { LoadTexture } from './utils-render';
+import { LoadMaterial } from './material';
 import { SHADER_FRAGMENT_DEFAULT, SHADER_FRAGMENT_STENCIL, SHADER_FRAGMENT_TEXTURE, SHADER_VERTEX_DEFAULT, SHADER_VERTEX_STENCIL, SHADER_VERTEX_TEXTURE } from './shaders';
 import { CreateMesh } from './mesh';
 import { CreateMeshesForPieces } from './piece-render';
@@ -6,6 +7,7 @@ import { CreateTerrain } from '../scene/terrain';
 import { mat4 } from "gl-matrix";
 import ImgRatAnim from '../../assets/rat.png';
 import ImgCheese from '../../assets/cheese.png';
+import { CreateStencilVertexBuffer } from "./stencil";
 // import ImgCheese from '../assets-raw/cheese3.png';
 
 // Contains several GL related elements necessary for rendering.
@@ -90,7 +92,7 @@ export async function CreateContext(canvas: HTMLCanvasElement) {
 
         meshesPieces: CreateMeshesForPieces(gl),
 
-/*{ meshTerrain, colorsTerrain } =*/ ...CreateTerrain(gl),
+        /*{ meshTerrain, colorsTerrain }*/ ...CreateTerrain(gl),
 
         // Special transform updated each frame to make sprites face the camera
         mtxSpriteFaceCamera: mat4.create(),
@@ -99,7 +101,9 @@ export async function CreateContext(canvas: HTMLCanvasElement) {
         texCheese: await LoadTexture(gl, ImgCheese),
 
         uvsBasic,
+
+        stencil: CreateStencilVertexBuffer(gl),
     };
 };
 
-export type Context = Awaited<ReturnType<typeof CreateContext>>;
+export type RenderContext = Awaited<ReturnType<typeof CreateContext>>;

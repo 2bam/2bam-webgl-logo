@@ -1,3 +1,4 @@
+import { RenderContext } from "./context";
 
 let _buffer: ReturnType<typeof CreateStencilVertexBuffer>;
 
@@ -20,16 +21,7 @@ export function CreateStencilVertexBuffer(gl: WebGLRenderingContext) {
     return { vertices, vertexCount: array.length / 3 };
 }
 
-export function GetStencilBuffer(gl: WebGLRenderingContext) {
-    //FIXME: gross
-    if (!_buffer) _buffer = CreateStencilVertexBuffer(gl);
-    return _buffer;
-}
-
-export function DrawStencil(gl: WebGLRenderingContext) {
-    if (!_buffer) _buffer = CreateStencilVertexBuffer(gl);
-    const { vertices, vertexCount } = _buffer;
-
+function DrawStencil(gl: WebGLRenderingContext, vertices: WebGLBuffer, vertexCount: number) {
     gl.enable(gl.STENCIL_TEST);
     gl.stencilFunc(gl.ALWAYS, STENCIL_REFVAL, STENCIL_MASK);
 
@@ -51,4 +43,19 @@ export function DrawStencil(gl: WebGLRenderingContext) {
 
     // Finally enable actual stencil testing for further operations
     gl.stencilFunc(gl.EQUAL, STENCIL_REFVAL, STENCIL_MASK);
+}
+
+
+export function ApplyStencil({ gl, canvas, materialStencil, stencil }: RenderContext) {
+    const { program, attrib: { aVertexPosition } } = materialStencil;
+    gl.viewport(0, 0, canvas.width, canvas.height);
+
+    //FIXME: move to stencil.ts
+    gl.clear(gl.STENCIL_BUFFER_BIT);
+    gl.useProgram(program);
+    gl.enableVertexAttribArray(aVertexPosition);
+    gl.bindBuffer(gl.ARRAY_BUFFER, stencil.vertices);
+    gl.vertexAttribPointer(aVertexPosition, 3, gl.FLOAT, false, 0, 0,); // Needs buffer bound!
+
+    DrawStencil(gl, stencil.vertices, stencil.vertexCount);
 }

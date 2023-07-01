@@ -1,5 +1,5 @@
 import { mat4, vec3 } from "gl-matrix";
-import { DEG_TO_RAD } from "../render/utils-render";
+import { DEG_TO_RAD } from "../utils-math";
 import { Mesh } from "../render/mesh";
 
 export interface Piece {
