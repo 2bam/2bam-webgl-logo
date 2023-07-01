@@ -1,7 +1,5 @@
 import { RenderContext } from "./context";
 
-let _buffer: ReturnType<typeof CreateStencilVertexBuffer>;
-
 const STENCIL_REFVAL = 1;
 const STENCIL_MASK = 1;
 const STENCIL_CIRCLE_LOD = 50;

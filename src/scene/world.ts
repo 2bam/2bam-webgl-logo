@@ -11,6 +11,8 @@ export class World {
 
     PlacePiece(piece: Piece) {
         vec3.copy(piece.position, piece.targetPosition);
+        // Make them slightly off-z to avoid z-fighting
+        vec3.add(piece.position, piece.position, [0, 0, piece.uid * 0.0001]);
         vec3.zero(piece.velocity);
         vec3.zero(piece.eulerAngles);
         vec3.zero(piece.eulerVelocity);

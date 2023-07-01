@@ -59,15 +59,13 @@ export async function LoadTexture(gl: WebGLRenderingContext, src: string): Promi
 
 // We assume no internal vertices as we deal with simple shapes. We'll also asume triangle strip mode.
 export function ExtrudeTriangleStripWithoutCentralVertices(vertices: vec3[], indices: number[], zDepth: number) {
-    //return { vertices, indices };
-
     const zOffset = vec3.fromValues(0, 0, zDepth);
     const iOffset = vertices.length;
 
     // Add the other displaced face
     const newVertices = vertices.concat(vertices.map(v => vec3.add(vec3.create(), v, zOffset)));
     const newIndices = indices.concat(indices.map(i => i + iOffset));
-    // Then, zip 'em
+    // Then, zip 'em both
     for (let i = 0; i < indices.length; i++) newIndices.push(newIndices[i], newIndices[i + iOffset]);
 
     return { vertices: newVertices, indices: newIndices };
@@ -75,4 +73,20 @@ export function ExtrudeTriangleStripWithoutCentralVertices(vertices: vec3[], ind
 
 export function FlatVec3(vs: vec3[]): number[] {
     return vs.flatMap(v => [...v]);
+}
+
+export function CreateTileMapUVs(columns: number, rows: number, frames: number) {
+    const us: number[] = [];
+    const vs: number[] = [];
+    for (let i = 0; i < frames; i++) {
+        const u = i % columns;
+        const v = 1 - (i - u) / columns;
+        us.push(u, u + 1, u, u + 1);
+        vs.push(v, v, v + 1, v + 1);
+    }
+    const uvs: number[] = [];
+    for (let i = 0; i < us.length; i++) {
+        uvs.push(us[i] / columns, vs[i] / rows);
+    }
+    return uvs;
 }

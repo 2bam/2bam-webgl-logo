@@ -4,6 +4,8 @@ import { World } from "./world";
 import { DEG_TO_RAD, RandomFrontLocation } from "../utils-math";
 import { RenderContext } from "../render/context";
 
+// OOP State pattern (FSM) to manage actor behaviors
+
 const ACTOR_REACH_THRESHOLD = 0.01;
 const SPEED = 9;
 const SCARE_TTL_BASE = 0.15;
@@ -90,7 +92,7 @@ abstract class ActorState {
     //
 
     abstract OnUpdate(time: number, deltaTime: number): void;
-    OnExit(): void {}
+    OnExit(): void { }
 
     GetFrame(time: number): number {
         return Math.floor(((time * 4) % 1) * 4);
@@ -126,7 +128,7 @@ abstract class ActorState {
         return false;
     }
 
-    Dance() {}
+    Dance() { }
 
     CanDance() {
         return false;
@@ -138,7 +140,7 @@ abstract class ActorState {
 }
 
 class IdleState extends ActorState {
-    override OnUpdate(time: number, deltaTime: number) {}
+    override OnUpdate(time: number, deltaTime: number) { }
 
     override Collect(piece: Piece) {
         this._actor.ChangeState(new CollectState(this._actor, piece));

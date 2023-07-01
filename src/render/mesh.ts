@@ -1,4 +1,4 @@
-import { mat4, vec3 } from "gl-matrix";
+import { vec3 } from "gl-matrix";
 import { FlatVec3 } from "./utils-render";
 
 export interface Mesh {

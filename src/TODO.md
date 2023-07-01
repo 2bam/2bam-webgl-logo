@@ -1,4 +1,4 @@
-## Nice to have
+# Nice to have
 
 Life's too short for perfection
 
@@ -10,4 +10,6 @@ Life's too short for perfection
 [ ] Rats jumping around the logo in a circle (Rotating around as time passes)
 [ ] Add back sprites/flies with some flocking
 [ ] Better cheese texture mapping
-[ ] Fix z-fighting on cheese sign
+
+# Bugs
+[x] Fix z-fighting on cheese sign

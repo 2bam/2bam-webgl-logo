@@ -1,4 +1,4 @@
-import { LoadTexture } from "./utils-render";
+import { CreateTileMapUVs, LoadTexture } from "./utils-render";
 import { LoadMaterial } from "./material";
 import {
     SHADER_FRAGMENT_DEFAULT,
@@ -15,24 +15,6 @@ import { mat4 } from "gl-matrix";
 import ImgRatAnim from "../../assets/rat.png";
 import ImgCheese from "../../assets/cheese.png";
 import { CreateStencilVertexBuffer } from "./stencil";
-
-// Contains several GL related elements necessary for rendering.
-
-function CreateTileMapUVs(columns: number, rows: number, frames: number) {
-    const us: number[] = [];
-    const vs: number[] = [];
-    for (let i = 0; i < frames; i++) {
-        const u = i % columns;
-        const v = 1 - (i - u) / columns;
-        us.push(u, u + 1, u, u + 1);
-        vs.push(v, v, v + 1, v + 1);
-    }
-    const uvs: number[] = [];
-    for (let i = 0; i < us.length; i++) {
-        uvs.push(us[i] / columns, vs[i] / rows);
-    }
-    return uvs;
-}
 
 export async function CreateContext(canvas: HTMLCanvasElement) {
     const gl = canvas.getContext("webgl", { stencil: true, alpha: true });
