@@ -1,5 +1,5 @@
 import { mat4, vec3 } from "gl-matrix";
-import { CreateMesh } from "./mesh";
+import { CreateMesh } from "../render/mesh";
 
 const TERRAIN_SIZE = 0.5;
 const TERRAIN_STRIDE = 20;

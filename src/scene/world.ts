@@ -1,6 +1,6 @@
 import { vec3 } from "gl-matrix";
 import { Piece, UpdatePieceTransform } from "./piece";
-import { Actor } from "./actor";
+import { Actor } from "./actor/actor";
 
 export class World {
 

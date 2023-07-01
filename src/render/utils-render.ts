@@ -90,11 +90,6 @@ export function FlatVec3(vs: vec3[]): number[] {
     return vs.flatMap(v => [...v]);
 }
 
-export function RandomFrontLocation(): vec3 {
-    const d = 1 + Math.random() * 2;
-    const a = (20 + 140 * Math.random()) * DEG_TO_RAD; // Only on front
-    return [Math.cos(a) * d, 0, Math.sin(a) * d];
-}
 
 export async function LoadTexture(gl: WebGLRenderingContext, src: string): Promise<WebGLTexture> {
     return new Promise((resolve, reject) => {
@@ -122,3 +117,4 @@ export async function LoadTexture(gl: WebGLRenderingContext, src: string): Promi
         image.src = src;
     });
 }
+

@@ -1,14 +1,19 @@
 import { ReadonlyMat4, ReadonlyVec3, mat4, vec3 } from "gl-matrix";
 import { Piece } from "../piece";
 import { World } from "../world";
-import { DrawActorQuadTEMP } from "..";
-import { DEG_TO_RAD, RandomFrontLocation } from "../utils";
-import { Context } from "../context";
+import { DEG_TO_RAD } from "../../render/utils-render";
+import { Context } from "../../render/context";
 
 const ACTOR_REACH_THRESHOLD = 0.01;
 const SPEED = 9;
 const SCARE_TTL_BASE = 0.15;
 const SCARE_JUMP_HEIGHT = 0.5;
+
+export function RandomFrontLocation(): vec3 {
+    const d = 1 + Math.random() * 2;
+    const a = (20 + 140 * Math.random()) * DEG_TO_RAD; // Only on front
+    return [Math.cos(a) * d, 0, Math.sin(a) * d];
+}
 
 export class Actor {
     position: vec3;

@@ -1,11 +1,11 @@
-import { LoadMaterial, LoadTexture } from './utils';
+import { LoadMaterial, LoadTexture } from './utils-render';
 import { SHADER_FRAGMENT_DEFAULT, SHADER_FRAGMENT_STENCIL, SHADER_FRAGMENT_TEXTURE, SHADER_VERTEX_DEFAULT, SHADER_VERTEX_STENCIL, SHADER_VERTEX_TEXTURE } from './shaders';
 import { CreateMesh } from './mesh';
-import { CreateMeshesForPieces } from './piece';
-import { CreateTerrain } from './terrain';
+import { CreateMeshesForPieces } from './piece-render';
+import { CreateTerrain } from '../scene/terrain';
 import { mat4 } from "gl-matrix";
-import ImgRatAnim from '../assets/rat.png';
-import ImgCheese from '../assets/cheese.png';
+import ImgRatAnim from '../../assets/rat.png';
+import ImgCheese from '../../assets/cheese.png';
 // import ImgCheese from '../assets-raw/cheese3.png';
 
 // Contains several GL related elements necessary for rendering.
