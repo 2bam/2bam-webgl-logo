@@ -16,18 +16,20 @@ export class Actor {
     facingX: number;
     state: ActorState;
 
-    wiggle = 0;
+    wiggle: number;
     transform: mat4;
 
     world: World;
+    index: number;
 
-    constructor(world: World, position: ReadonlyVec3) {
+    constructor(world: World, position: ReadonlyVec3, index: number) {
         this.world = world;
         this.position = vec3.clone(position);
         this.state = new InitialState(this);
         this.transform = mat4.create();
         this.wiggle = 0;
         this.facingX = Math.random() < 0.5 ? -1 : 1;
+        this.index = index;
     }
 
     ChangeState(newState: ActorState) {
@@ -92,7 +94,7 @@ abstract class ActorState {
     //
 
     abstract OnUpdate(time: number, deltaTime: number): void;
-    OnExit(): void { }
+    OnExit(): void {}
 
     GetFrame(time: number): number {
         return Math.floor(((time * 4) % 1) * 4);
@@ -128,7 +130,7 @@ abstract class ActorState {
         return false;
     }
 
-    Dance() { }
+    Dance() {}
 
     CanDance() {
         return false;
@@ -140,7 +142,7 @@ abstract class ActorState {
 }
 
 class IdleState extends ActorState {
-    override OnUpdate(time: number, deltaTime: number) { }
+    override OnUpdate(time: number, deltaTime: number) {}
 
     override Collect(piece: Piece) {
         this._actor.ChangeState(new CollectState(this._actor, piece));
@@ -173,6 +175,7 @@ class InitialState extends IdleState {
 class DanceState extends ActorState {
     override OnUpdate(time: number, deltaTime: number) {
         this._actor.wiggle = Math.sin(time * 10);
+        this._actor.position = this._actor.world.DanceCircleLocationFor(this._actor.index);
     }
 
     override OnExit() {
@@ -239,7 +242,9 @@ class PlaceState extends ActorState {
         if (result === "reached") {
             this._actor.world.PlacePiece(this._piece);
             this._actor.world.assigned.delete(this._piece.uid);
-            this._actor.ChangeState(new ClimbDownState(this._actor, RandomFrontLocation()));
+            this._actor.ChangeState(
+                new ClimbDownState(this._actor, this._actor.world.DanceCircleLocationFor(this._actor.index))
+            );
         }
     }
 

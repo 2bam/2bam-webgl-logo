@@ -17,6 +17,10 @@ const LOGO = `
  -----  +---   -   -  -   -
 `;
 
+const FOV = 50;
+const CAMERA_HEIGHT = 0.9;
+const CAMERA_LOOK_HEIGHT = 0.25;
+
 export async function Main(canvas: HTMLCanvasElement) {
     const ctx = await WebGLSetup(canvas);
     const world = WorldSetup(ctx);
@@ -58,12 +62,14 @@ function WorldSetup({ meshesPieces }: RenderContext) {
     for (const piece of pieces) world.PlacePiece(piece);
 
     const actors: Actor[] = [];
-    for (let i = 0; i < 10; i++) {
-        actors.push(new Actor(world, RandomFrontLocation()));
+    for (let i = 0; i < 15; i++) {
+        actors.push(new Actor(world, RandomFrontLocation(), i));
     }
 
     world.pieces = pieces;
     world.actors = actors;
+
+    for (let i = 0; i < 10; i++) actors[i].position = world.DanceCircleLocationFor(i);
 
     return world;
 }
@@ -158,8 +164,10 @@ function CreatePiecesWithDependencies(logo: string, meshesPieces: { [ch: string]
         return { ...e, needs };
     });
 
+    const SIGN_OFFSET_X = -2.7;
+
     const pieces: Piece[] = withNeeds.map(({ gx, gy, uid, needs, ch }) => {
-        const position: vec3 = [gx * 0.2 - 3, gy * 0.2, 0];
+        const position: vec3 = [gx * 0.2 + SIGN_OFFSET_X, gy * 0.2, 0];
         const mesh = meshesPieces[ch] ? meshesPieces[ch] : meshesPieces["default"];
         return {
             uid,
@@ -186,8 +194,9 @@ function Scatter(world: World) {
         world.placed.delete(p.uid);
 
         p.velocity[0] = (Math.random() - 0.5) * 5;
-        p.velocity[1] = 5 + Math.random() * 0.5;
-        p.velocity[2] = (Math.random() - 0.5) * 5;
+        //p.velocity[1] = 5 + Math.random() * 0.5;
+        p.velocity[1] = 3 + Math.random() * 2.5;
+        p.velocity[2] = (Math.random() - 0.5) * 5 - 1; // Bias towards back
 
         //FIXME: Why is this needed if the floor check is done after the integration?
         p.position[1] = Math.max(p.position[1] + 0.1, 0);
@@ -198,7 +207,8 @@ function Scatter(world: World) {
     }
 }
 
-function UpdateEntities({ pieces, actors, placed }: World, time: number, deltaTime: number) {
+function UpdateEntities(world: World, time: number, deltaTime: number) {
+    const { pieces, actors, placed } = world;
     for (const piece of pieces) {
         if (placed.has(piece.uid)) {
             continue;
@@ -223,6 +233,10 @@ function UpdateEntities({ pieces, actors, placed }: World, time: number, deltaTi
     for (const actor of actors) {
         actor.state.OnUpdate(time, deltaTime);
     }
+
+    if (actors.every(actor => actor.state.CanDance())) {
+        world.danceCircleDegs += deltaTime * 10;
+    }
 }
 
 function RenderScene(ctx: RenderContext, { actors, pieces }: World, time: number) {
@@ -239,12 +253,12 @@ function RenderScene(ctx: RenderContext, { actors, pieces }: World, time: number
     const mtxProjection = mat4.create();
     const mtxView = mat4.create();
     const mtxModel = mat4.create();
-    mat4.perspective(mtxProjection, 90 * DEG_TO_RAD, canvas.width / canvas.height, 0.1, 100);
+    mat4.perspective(mtxProjection, FOV * DEG_TO_RAD, canvas.width / canvas.height, 0.1, 100);
 
     mat4.identity(mtxView);
-    const t = time * 0.001;
-    const m = 0.1;
-    mat4.lookAt(mtxView, [Math.cos(t) * m, Math.sin(t) * m + 1, 3], [0, 0, 0], [0, 1, 0]);
+    const t = time * 1;
+    const m = 0.05;
+    mat4.lookAt(mtxView, [Math.cos(t) * m, Math.sin(t) * m + CAMERA_HEIGHT, 3], [0, CAMERA_LOOK_HEIGHT, 0], [0, 1, 0]);
 
     gl.uniformMatrix4fv(materialDefault.uniform.uProjection, false, mtxProjection);
     gl.uniformMatrix4fv(materialDefault.uniform.uView, false, mtxView);

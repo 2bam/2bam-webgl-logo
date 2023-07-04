@@ -5,11 +5,13 @@ const STENCIL_MASK = 1;
 const STENCIL_CIRCLE_LOD = 50;
 
 export function CreateStencilVertexBuffer(gl: WebGLRenderingContext) {
-    const array = [0, 0, 0];
+    // Rect on upper part, half ellipse on lower
+    const array = [0, 0, 0, -1, 1, 0, 1, 1, 0];
     for (let i = 0; i <= STENCIL_CIRCLE_LOD; i++) {
-        const r = (i * Math.PI * 2) / STENCIL_CIRCLE_LOD;
-        array.push(Math.cos(r), Math.sin(r), 0);
+        const r = (i * Math.PI) / STENCIL_CIRCLE_LOD;
+        array.push(Math.cos(r), -Math.sin(r), 0);
     }
+    array.push(-1, 1, 0);
     const vertices = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, vertices);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(array), gl.STATIC_DRAW);
