@@ -1,7 +1,7 @@
 import { vec3, mat4 } from "gl-matrix";
-import { DEG_TO_RAD, RandomFrontLocation } from "./utils-math";
-import { Piece, UpdatePieceTransform } from "./scene/piece";
-import { Actor } from "./scene/actor";
+import { DEG_TO_RAD } from "./utils-math";
+import { Piece, PlacePiece, UpdatePieceTransform } from "./scene/piece";
+import { Actor, SetDanceCircleLocation, SetRandomFrontLocation } from "./scene/actor";
 import { World } from "./scene/world";
 import { Mesh } from "./render/mesh";
 import { RenderContext, CreateContext } from "./render/context";
@@ -33,11 +33,16 @@ export async function Main(canvas: HTMLCanvasElement) {
     // One shot initial scatter after a second
     setTimeout(() => Scatter(world), 1000);
 
+    let lastScatterTime = 0;
     function onTap() {
-        Scatter(world);
+        // Throttle scatter
+        const now = performance.now();
+        if (now - lastScatterTime > 100) {
+            lastScatterTime = now;
+            Scatter(world);
+        }
     }
     canvas.addEventListener("click", onTap);
-    //canvas.addEventListener('touchstart', onTap);
 
     canvas.addEventListener("webglcontextlost", () => {
         // Easy peasy
@@ -57,19 +62,25 @@ async function WebGLSetup(canvas: HTMLCanvasElement): Promise<RenderContext> {
 }
 
 function WorldSetup({ meshesPieces }: RenderContext) {
-    const world = new World();
     const pieces = CreatePiecesWithDependencies(LOGO, meshesPieces);
-    for (const piece of pieces) world.PlacePiece(piece);
-
     const actors: Actor[] = [];
+    const world = new World();
     for (let i = 0; i < 15; i++) {
-        actors.push(new Actor(world, RandomFrontLocation(), i));
+        actors.push(new Actor(world, i));
     }
-
     world.pieces = pieces;
     world.actors = actors;
 
-    for (let i = 0; i < 10; i++) actors[i].position = world.DanceCircleLocationFor(i);
+    for (const piece of pieces) PlacePiece(world, piece);
+
+    // Locate most circular but keep some random
+    for (let i = 0; i < actors.length; i++) {
+        const actor = actors[i];
+        if (i % 3 === 0)
+            SetRandomFrontLocation(actor.position);
+        else
+            SetDanceCircleLocation(actor.position, actor);
+    }
 
     return world;
 }
@@ -128,7 +139,7 @@ function ScheduleActorsThink(world: World) {
     setTimeout(() => ScheduleActorsThink(world), 100);
 }
 
-function CreatePiecesWithDependencies(logo: string, meshesPieces: { [ch: string]: Mesh }): Piece[] {
+function CreatePiecesWithDependencies(logo: string, meshesPieces: { [ch: string]: Mesh; }): Piece[] {
     console.log(logo);
     const lines = logo.split("\n");
     lines.reverse();
@@ -158,8 +169,8 @@ function CreatePiecesWithDependencies(logo: string, meshesPieces: { [ch: string]
             e.gy === 0
                 ? [] // Special case, make ground level pieces depend on nothing so they can be placed always right away
                 : characters
-                      .filter(other => Math.abs(other.gx - e.gx) <= 1 && Math.abs(other.gy - e.gy) <= 1)
-                      .map(e => e.uid);
+                    .filter(other => Math.abs(other.gx - e.gx) <= 1 && Math.abs(other.gy - e.gy) <= 1)
+                    .map(e => e.uid);
 
         return { ...e, needs };
     });

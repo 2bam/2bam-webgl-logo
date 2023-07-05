@@ -46,11 +46,10 @@ jobs:
         with:
           name: built-page
           path: ./dist
-      - name: ls
-        run: ls -l
+
       - name: ls dist
         run: ls -l ./dist
-        
+
       - name: Setup Pages
         uses: actions/configure-pages@v3
 
@@ -61,3 +60,17 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v2
+
+  # Calculate gzipped size of the dist
+  vanity-size:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v2
+        with:
+          name: built-page
+          path: ./dist
+      - name: calc-size
+        run: |
+          tar -czf archive *
+          echo "## Gzipped size in bytes: $(du -b archive | cut -f1)" >> $GITHUB_STEP_SUMMARY
