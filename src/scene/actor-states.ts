@@ -19,7 +19,7 @@ export abstract class ActorState {
     //
 
     abstract OnUpdate(time: number, deltaTime: number): void;
-    OnExit(): void { }
+    OnExit(): void {}
 
     GetFrame(time: number): number {
         return Math.floor(((time * 4) % 1) * 4);
@@ -55,7 +55,7 @@ export abstract class ActorState {
         return false;
     }
 
-    Dance() { }
+    Dance() {}
 
     CanDance() {
         return false;
@@ -67,7 +67,7 @@ export abstract class ActorState {
 }
 
 class IdleState extends ActorState {
-    override OnUpdate(time: number, deltaTime: number) { }
+    override OnUpdate(time: number, deltaTime: number) {}
 
     override Collect(piece: Piece) {
         this._actor.ChangeState(new CollectState(this._actor, piece));

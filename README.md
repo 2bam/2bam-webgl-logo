@@ -4,6 +4,7 @@ This project was done in a week or so to replace my old webpage header and showc
 
 - TypeScript 
 - Vanilla WebGL
+- No libraries
 - Node and Webpack
 - A bit of algebra
 - Github Actions to build and deploy to its own Github Page

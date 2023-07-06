@@ -76,10 +76,8 @@ function WorldSetup({ meshesPieces }: RenderContext) {
     // Locate most circular but keep some random
     for (let i = 0; i < actors.length; i++) {
         const actor = actors[i];
-        if (i % 3 === 0)
-            SetRandomFrontLocation(actor.position);
-        else
-            SetDanceCircleLocation(actor.position, actor);
+        if (i % 3 === 0) SetRandomFrontLocation(actor.position);
+        else SetDanceCircleLocation(actor.position, actor);
     }
 
     return world;
@@ -139,7 +137,7 @@ function ScheduleActorsThink(world: World) {
     setTimeout(() => ScheduleActorsThink(world), 100);
 }
 
-function CreatePiecesWithDependencies(logo: string, meshesPieces: { [ch: string]: Mesh; }): Piece[] {
+function CreatePiecesWithDependencies(logo: string, meshesPieces: { [ch: string]: Mesh }): Piece[] {
     console.log(logo);
     const lines = logo.split("\n");
     lines.reverse();
@@ -169,8 +167,8 @@ function CreatePiecesWithDependencies(logo: string, meshesPieces: { [ch: string]
             e.gy === 0
                 ? [] // Special case, make ground level pieces depend on nothing so they can be placed always right away
                 : characters
-                    .filter(other => Math.abs(other.gx - e.gx) <= 1 && Math.abs(other.gy - e.gy) <= 1)
-                    .map(e => e.uid);
+                      .filter(other => Math.abs(other.gx - e.gx) <= 1 && Math.abs(other.gy - e.gy) <= 1)
+                      .map(e => e.uid);
 
         return { ...e, needs };
     });
