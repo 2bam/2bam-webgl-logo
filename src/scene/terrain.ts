@@ -2,7 +2,13 @@ import { mat4, vec3 } from "gl-matrix";
 import { CreateMesh } from "../render/mesh";
 
 const TERRAIN_SIZE = 0.5;
-const TERRAIN_STRIDE = 20;
+
+const TERRAIN_Z0 = -5;
+const TERRAIN_Z1 = 6;
+const TERRAIN_X0 = -10;
+const TERRAIN_X1 = 9;
+
+const TERRAIN_STRIDE = TERRAIN_X1 - TERRAIN_X0 + 1;
 
 export function CreateTerrain(gl: WebGLRenderingContext) {
     const terrainPts: vec3[] = [];
@@ -10,8 +16,9 @@ export function CreateTerrain(gl: WebGLRenderingContext) {
     const terrainIdx: number[] = [];
 
     // Create a grid of vertices
-    for (let z = -5; z < 7; z++) {
-        for (let x = -10; x < -10 + TERRAIN_STRIDE; x++) {
+    // Notice for's <= instead of < to add last "closing" vertices
+    for (let z = TERRAIN_Z0; z <= TERRAIN_Z1; z++) {
+        for (let x = TERRAIN_X0; x <= TERRAIN_X1; x++) {
             const y = 0 + Math.random() * 0.3;
             terrainPts.push([x * TERRAIN_SIZE, y * TERRAIN_SIZE, z * TERRAIN_SIZE]);
 
@@ -23,8 +30,8 @@ export function CreateTerrain(gl: WebGLRenderingContext) {
 
     // Index all triangles
     let index = 0;
-    for (let z = -5; z < 6; z++) {
-        for (let x = -10; x < 9; x++) {
+    for (let z = TERRAIN_Z0; z < TERRAIN_Z1; z++) {
+        for (let x = TERRAIN_X0; x < TERRAIN_X1; x++) {
             terrainIdx.push(
                 index,
                 index + 1,

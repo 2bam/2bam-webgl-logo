@@ -1,12 +1,12 @@
 # 2bam WebGl logo
 
-This project was done in a week or so to replace my old webpage header and showcase some skills
+This project was done in a couple of weeks or so to replace my old webpage header and showcase some skills
 
 - TypeScript 
 - Vanilla WebGL
-- No libraries
-- Node and Webpack
+- Webpack
 - A bit of algebra
+- No library dependencies besides vector/matrix math
 - Github Actions to build and deploy to its own Github Page
 - Some of this paradigm, some of that
 

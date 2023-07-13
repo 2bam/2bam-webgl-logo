@@ -58,6 +58,8 @@ async function WebGLSetup(canvas: HTMLCanvasElement): Promise<RenderContext> {
     gl.enable(gl.DEPTH_TEST);
     gl.depthFunc(gl.LESS);
 
+    gl.disable(gl.CULL_FACE);
+
     return ctx;
 }
 
@@ -101,43 +103,45 @@ function ScheduleFrameLoop(ctx: RenderContext, world: World) {
 
 // High level coordination for the actors
 function ScheduleActorsThink(world: World) {
-    const { pieces, actors } = world;
+    function actorsThink() {
+        const { pieces, actors } = world;
 
-    const notPlaced = pieces.filter(p => !world.placed.has(p.uid));
-    if (notPlaced.length === 0 && actors.every(actor => actor.state.CanDance())) {
-        for (const actor of actors) {
-            actor.state.Dance();
-        }
-    } else {
-        const notAssigned = notPlaced.filter(p => !world.assigned.has(p.uid));
-        const notMidFlight = notAssigned.filter(p => p.position[1] === 0);
-
-        // TODO: Possibly better to have some time before that...To make sure the dude actually waits if another needs
-        //       to go first. Maybe that wait "at base" can go in Actors's PlaceState
-        //       const candidates = notMidFlight.filter(p => p.needs.length === 0 || p.needs.some(n => world.placed.has(n) || world.assigned.has(n)));
-        const candidates = notMidFlight.filter(p => p.needs.length === 0 || p.needs.some(n => world.placed.has(n)));
-
-        if (candidates.length) {
-            // Build from the bottom up (choose lower "y" first)
-            candidates.sort((a, b) =>
-                a.targetPosition[1] !== b.targetPosition[1] ? a.targetPosition[1] - b.targetPosition[1] : Math.random()
-            );
-
-            let candidateIndex = 0;
-            actors.sort((a, b) => Math.random());
+        const notPlaced = pieces.filter(p => !world.placed.has(p.uid));
+        if (notPlaced.length === 0 && actors.every(actor => actor.state.CanDance())) {
             for (const actor of actors) {
-                if (actor.state.Collect(candidates[candidateIndex])) {
-                    candidateIndex++;
-                    if (candidateIndex >= candidates.length) break;
+                actor.state.Dance();
+            }
+        } else {
+            const notAssigned = notPlaced.filter(p => !world.assigned.has(p.uid));
+            const notMidFlight = notAssigned.filter(p => p.position[1] === 0);
+
+            // TODO: Possibly better to have some time before that...To make sure the dude actually waits if another needs
+            //       to go first. Maybe that wait "at base" can go in Actors's PlaceState
+            //       const candidates = notMidFlight.filter(p => p.needs.length === 0 || p.needs.some(n => world.placed.has(n) || world.assigned.has(n)));
+            const candidates = notMidFlight.filter(p => p.needs.length === 0 || p.needs.some(n => world.placed.has(n)));
+
+            if (candidates.length) {
+                // Build from the bottom up (choose lower "y" first)
+                candidates.sort((a, b) =>
+                    a.targetPosition[1] !== b.targetPosition[1] ? a.targetPosition[1] - b.targetPosition[1] : Math.random()
+                );
+
+                let candidateIndex = 0;
+                actors.sort((a, b) => Math.random());
+                for (const actor of actors) {
+                    if (actor.state.Collect(candidates[candidateIndex])) {
+                        candidateIndex++;
+                        if (candidateIndex >= candidates.length) break;
+                    }
                 }
             }
         }
     }
 
-    setTimeout(() => ScheduleActorsThink(world), 100);
+    setInterval(actorsThink, 100);
 }
 
-function CreatePiecesWithDependencies(logo: string, meshesPieces: { [ch: string]: Mesh }): Piece[] {
+function CreatePiecesWithDependencies(logo: string, meshesPieces: { [ch: string]: Mesh; }): Piece[] {
     console.log(logo);
     const lines = logo.split("\n");
     lines.reverse();
@@ -167,8 +171,8 @@ function CreatePiecesWithDependencies(logo: string, meshesPieces: { [ch: string]
             e.gy === 0
                 ? [] // Special case, make ground level pieces depend on nothing so they can be placed always right away
                 : characters
-                      .filter(other => Math.abs(other.gx - e.gx) <= 1 && Math.abs(other.gy - e.gy) <= 1)
-                      .map(e => e.uid);
+                    .filter(other => Math.abs(other.gx - e.gx) <= 1 && Math.abs(other.gy - e.gy) <= 1)
+                    .map(e => e.uid);
 
         return { ...e, needs };
     });

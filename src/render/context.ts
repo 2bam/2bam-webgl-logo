@@ -25,8 +25,6 @@ export async function CreateContext(canvas: HTMLCanvasElement) {
     gl.bindBuffer(gl.ARRAY_BUFFER, uvsBasic);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(CreateTileMapUVs(4, 2, 6)), gl.STATIC_DRAW);
 
-    gl.disable(gl.CULL_FACE);
-
     return {
         canvas,
         gl,
