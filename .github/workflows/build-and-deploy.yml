@@ -1,5 +1,5 @@
 name: build-and-deploy-page
-run-name: Build with Node 20 and Webpack and Deploy to GH Pages (${{ github.actor }})
+run-name: Build with Node 20 and Webpack then Deploy to GH Pages (${{ github.actor }})
 
 on:
   push:
@@ -16,13 +16,13 @@ jobs:
     - name: Setup node
       uses: actions/setup-node@v3
       with:
-        node-version: '20'
+        node-version: 20
 
     - name: Build
       run: |
         npm install
         npm run build:prod
-    - uses: actions/upload-artifact@v2
+    - uses: actions/upload-artifact@v3
       with:
         name: built-page
         path: ./dist
@@ -42,7 +42,12 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/download-artifact@v2
+      - name: Setup node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20
+
+      - uses: actions/download-artifact@v3
         with:
           name: built-page
           path: ./dist
@@ -66,7 +71,7 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
         with:
           name: built-page
           path: ./dist
