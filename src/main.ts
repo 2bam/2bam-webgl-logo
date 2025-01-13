@@ -115,9 +115,8 @@ function ScheduleActorsThink(world: World) {
             const notAssigned = notPlaced.filter(p => !world.assigned.has(p.uid));
             const notMidFlight = notAssigned.filter(p => p.position[1] === 0);
 
-            // TODO: Possibly better to have some time before that...To make sure the dude actually waits if another needs
-            //       to go first. Maybe that wait "at base" can go in Actors's PlaceState
-            //       const candidates = notMidFlight.filter(p => p.needs.length === 0 || p.needs.some(n => world.placed.has(n) || world.assigned.has(n)));
+            // TODO: Possibly better to have some time before that...To make sure the rat actually waits if another
+            //       needs to go first. Maybe that wait "at base" can go in Actors's PlaceState
             const candidates = notMidFlight.filter(p => p.needs.length === 0 || p.needs.some(n => world.placed.has(n)));
 
             if (candidates.length) {
@@ -207,7 +206,6 @@ function Scatter(world: World) {
         world.placed.delete(p.uid);
 
         p.velocity[0] = (Math.random() - 0.5) * 5;
-        //p.velocity[1] = 5 + Math.random() * 0.5;
         p.velocity[1] = 3 + Math.random() * 2.5;
         p.velocity[2] = (Math.random() - 0.5) * 5 - 1; // Bias towards back
 
@@ -282,20 +280,12 @@ function RenderScene(ctx: RenderContext, { actors, pieces }: World, time: number
     mat4.getTranslation(lookAtViewTranslation, mtxView);
     mat4.translate(ctx.mtxSpriteFaceCamera, mtxInvView, lookAtViewTranslation);
 
+    // Don't do depth testing for terrain
     gl.disable(gl.DEPTH_TEST);
     DrawTerrain(gl, meshTerrain, colorsTerrain, materialDefault);
 
-    // Don't do depth testing for terrain
     gl.enable(gl.DEPTH_TEST);
     gl.clear(gl.DEPTH_BUFFER_BIT);
-
-    // Draw flying sprites
-    // DrawSprite(gl, [1, 0, 0], [1, 0, 1, 1], 'actor');
-    // DrawSprite(gl, [1, 1, 0], [1, .5, 1, 1], 'actor');
-    // DrawSprite(gl, [1, 0, 1], [1, 0, .5, 1], 'actor');
-    // DrawSprite(gl, [1, 1, 1], [.5, 0, 1, 1], 'actor');
-    // DrawSprite(gl, [-1, 1, 1], [.5, 0, 1, 1], 'actor');
-    ////drawSprite(gl, [-1, 1, 2], [.5, 1, 1, 1], 'actor');
 
     gl.useProgram(ctx.materialUnlitTex.program);
     gl.uniformMatrix4fv(ctx.materialUnlitTex.uniform.uProjection, false, mtxProjection);
